@@ -1,0 +1,122 @@
+.root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.lottie {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.foodLoadingWrap {
+  position: absolute;
+  top: 14px;
+  right: max(20px, calc((100vw - 600px) / 2 + 16px));
+  width: 78px;
+  height: 78px;
+  display: block;
+  filter: drop-shadow(0 4px 10px rgba(140, 130, 80, 0.18));
+  animation: tiltGently 5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.foodChoiceWrap {
+  position: absolute;
+  top: 52%;
+  right: max(12px, calc((100vw - 640px) / 2 - 110px));
+  width: 130px;
+  height: 130px;
+  display: block;
+  filter: drop-shadow(0 8px 14px rgba(140, 130, 80, 0.2));
+  animation: floatY 7.5s ease-in-out infinite;
+  animation-delay: 1.5s;
+}
+
+.dogTrack {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  height: 90px;
+  display: block;
+}
+
+.dog {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 86px;
+  height: 86px;
+  display: block;
+  filter: drop-shadow(0 6px 10px rgba(140, 100, 60, 0.25));
+  animation: dogWalk 26s linear infinite;
+}
+
+@keyframes dogWalk {
+  0% {
+    transform: translateX(-100px) scaleX(1);
+  }
+  47% {
+    transform: translateX(calc(100vw + 20px)) scaleX(1);
+  }
+  50% {
+    transform: translateX(calc(100vw + 20px)) scaleX(-1);
+  }
+  97% {
+    transform: translateX(-100px) scaleX(-1);
+  }
+  100% {
+    transform: translateX(-100px) scaleX(1);
+  }
+}
+
+@keyframes floatY {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(3deg);
+  }
+}
+
+@keyframes tiltGently {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .foodChoiceWrap {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .foodLoadingWrap {
+    top: 10px;
+    right: 12px;
+    width: 60px;
+    height: 60px;
+  }
+  .dog {
+    width: 70px;
+    height: 70px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foodLoadingWrap,
+  .foodChoiceWrap,
+  .dog {
+    animation: none !important;
+  }
+}
