@@ -87,6 +87,41 @@ npm run build
 
 將 `dist` 目錄部署到任意靜態網站託管（GitHub Pages、Cloudflare Pages、公司內網伺服器等）。
 
+## GitHub Pages（自動部署）
+
+本倉庫已內建 [GitHub Actions](https://docs.github.com/zh/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#publishing-with-a-custom-github-actions-workflow) 工作流程：`.github/workflows/deploy-pages.yml`。每次推送到 `main` 或 `master` 會建置並發佈到 GitHub Pages。
+
+### 你需要做的設定
+
+1. **在 GitHub 建立 Secret（必要）**  
+   進入 Repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**  
+   - Name：`VITE_APPS_SCRIPT_URL`  
+   - Value：你的 Apps Script 網址（與本機 `.env.local` 相同，`/exec` 結尾）。  
+   沒有這個 secret 時，建置仍會成功，但線上網頁會顯示「尚未連結試算表」。
+
+2. **開啟 GitHub Pages 來源**  
+   Repo → **Settings** → **Pages** → **Build and deployment** → **Source** 選 **GitHub Actions**（不要選 Deploy from a branch）。
+
+3. **推程式碼**  
+   將變更推送到 `main`（或 `master`）。到 **Actions** 分頁確認 **Deploy GitHub Pages** 綠燈。
+
+4. **開啟網址**  
+   專案站網址為：  
+   `https://<你的-GitHub-使用者名稱>.github.io/<倉庫名稱>/`  
+   例如倉庫為 [LockingWang/office-meal-order](https://github.com/LockingWang/office-meal-order) 時，通常是：  
+   `https://lockingwang.github.io/office-meal-order/`  
+   （實際網址以 **Settings → Pages** 顯示的為準。）
+
+### 本機模擬 GitHub Pages 路徑
+
+```powershell
+$env:VITE_BASE_PATH="/office-meal-order/"
+npm run build
+npm run preview
+```
+
+若你之後**重新命名 GitHub 倉庫**，請確認 `VITE_BASE_PATH` 與新倉庫名稱一致；CI 已用 `github.event.repository.name` 自動帶入，一般不需手動改。
+
 ## 操作流程
 
 1. **第一次進站**：跳出輸入姓名視窗（資料只存在瀏覽器 `localStorage`）。日後可點右上角姓名按鈕修改。

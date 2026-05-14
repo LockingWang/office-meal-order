@@ -1,12 +1,15 @@
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import styles from "./Mascots.module.css";
 
+const lottie = (name: string) =>
+  `${import.meta.env.BASE_URL}lotties/${name}`;
+
 export function Mascots() {
   return (
     <div className={styles.root} aria-hidden="true">
       <span className={styles.foodLoadingWrap}>
         <DotLottieReact
-          src="/lotties/food-loading.lottie"
+          src={lottie("food-loading.lottie")}
           autoplay
           loop
           className={styles.lottie}
@@ -15,7 +18,7 @@ export function Mascots() {
 
       <span className={styles.foodChoiceWrap}>
         <DotLottieReact
-          src="/lotties/food-choice.lottie"
+          src={lottie("food-choice.lottie")}
           autoplay
           loop
           className={styles.lottie}
@@ -25,7 +28,7 @@ export function Mascots() {
       <span className={styles.dogTrack}>
         <span className={styles.dog}>
           <DotLottieReact
-            src="/lotties/dog-walking.lottie"
+            src={lottie("dog-walking.lottie")}
             autoplay
             loop
             className={styles.lottie}
