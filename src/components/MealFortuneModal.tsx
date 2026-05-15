@@ -1,6 +1,8 @@
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { useCallback, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { fetchMealFortune } from "../api/openaiMealFortune";
 import { FORTUNE_PSYCHIC_LOTTIE } from "../constants/fortuneLottie";
 import type { GroupOrderMeta, Order } from "../api";
@@ -16,6 +18,33 @@ function formatExistingItems(orders: Order[], maxItems: number): string {
   const slice = uniq.slice(0, maxItems);
   const tail = uniq.length > maxItems ? `…等共 ${uniq.length} 種` : "";
   return `${slice.join("、")}${tail}`;
+}
+
+const fortuneRemarkPlugins = [remarkGfm];
+
+function FortuneMarkdownBody({ source }: { source: string }) {
+  if (!source.trim()) return null;
+  return (
+    <div className={styles.mdBody}>
+      <ReactMarkdown
+        remarkPlugins={fortuneRemarkPlugins}
+        components={{
+          a: ({ href, children, ...rest }) => (
+            <a
+              {...rest}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {children}
+            </a>
+          ),
+        }}
+      >
+        {source}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 function FortuneSections({ text }: { text: string }) {
@@ -35,13 +64,13 @@ function FortuneSections({ text }: { text: string }) {
           return (
             <section key={i}>
               <h2>{title}</h2>
-              <div style={{ whiteSpace: "pre-wrap" }}>{body}</div>
+              <FortuneMarkdownBody source={body} />
             </section>
           );
         }
         return (
-          <div key={i} style={{ whiteSpace: "pre-wrap" }}>
-            {chunk}
+          <div key={i} className={styles.mdLead}>
+            <FortuneMarkdownBody source={chunk} />
           </div>
         );
       })}

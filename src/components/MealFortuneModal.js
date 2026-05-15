@@ -2,6 +2,8 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { useCallback, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { fetchMealFortune } from "../api/openaiMealFortune";
 import { FORTUNE_PSYCHIC_LOTTIE } from "../constants/fortuneLottie";
 import { toUserFacingErrorMessage } from "../utils/userFacingError";
@@ -17,6 +19,14 @@ function formatExistingItems(orders, maxItems) {
     const tail = uniq.length > maxItems ? `…等共 ${uniq.length} 種` : "";
     return `${slice.join("、")}${tail}`;
 }
+const fortuneRemarkPlugins = [remarkGfm];
+function FortuneMarkdownBody({ source }) {
+    if (!source.trim())
+        return null;
+    return (_jsx("div", { className: styles.mdBody, children: _jsx(ReactMarkdown, { remarkPlugins: fortuneRemarkPlugins, components: {
+                a: ({ href, children, ...rest }) => (_jsx("a", { ...rest, href: href, target: "_blank", rel: "noopener noreferrer", children: children })),
+            }, children: source }) }));
+}
 function FortuneSections({ text }) {
     const chunks = text
         .split(/\n(?=## )/)
@@ -28,9 +38,9 @@ function FortuneSections({ text }) {
                 const nl = rest.indexOf("\n");
                 const title = (nl === -1 ? rest : rest.slice(0, nl)).trim();
                 const body = (nl === -1 ? "" : rest.slice(nl + 1)).trim();
-                return (_jsxs("section", { children: [_jsx("h2", { children: title }), _jsx("div", { style: { whiteSpace: "pre-wrap" }, children: body })] }, i));
+                return (_jsxs("section", { children: [_jsx("h2", { children: title }), _jsx(FortuneMarkdownBody, { source: body })] }, i));
             }
-            return (_jsx("div", { style: { whiteSpace: "pre-wrap" }, children: chunk }, i));
+            return (_jsx("div", { className: styles.mdLead, children: _jsx(FortuneMarkdownBody, { source: chunk }) }, i));
         }) }));
 }
 export function MealFortuneModal({ open, onClose, meta, userName, orders, }) {
