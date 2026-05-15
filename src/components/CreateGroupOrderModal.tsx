@@ -5,6 +5,8 @@ import {
   type OrderType,
 } from "../api";
 import styles from "./CreateGroupOrderModal.module.css";
+import { LoadingOverlay } from "./LoadingOverlay";
+import { toUserFacingErrorMessage } from "../utils/userFacingError";
 
 function todayString(): string {
   const d = new Date();
@@ -86,13 +88,17 @@ export function CreateGroupOrderModal({
       onCreated();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "建立失敗");
+      setError(
+        toUserFacingErrorMessage(err, "建立團購單失敗，請稍後再試。")
+      );
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
+    <>
+      <LoadingOverlay show={submitting} variant="submit" />
     <div
       className={styles.backdrop}
       onClick={(e) => {
@@ -221,5 +227,6 @@ export function CreateGroupOrderModal({
         </form>
       </div>
     </div>
+    </>
   );
 }

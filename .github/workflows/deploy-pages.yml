@@ -1,5 +1,11 @@
 # 將 Vite 建置結果部署到 GitHub Pages（來源：GitHub Actions）
-# 使用前請在 Repo → Settings → Secrets and variables → Actions
+#
+# 【必做】第一次使用前請到：
+#   https://github.com/<owner>/<repo>/settings/pages
+#   將 Build and deployment → Source 設為「GitHub Actions」並儲存。
+#   若未啟用，deploy-pages 會出現 HttpError: Not Found (404)。
+#
+# 並在 Repo → Settings → Secrets and variables → Actions
 # 新增 Repository secret：VITE_APPS_SCRIPT_URL（你的 Apps Script /exec 網址）
 
 name: Deploy GitHub Pages
@@ -47,11 +53,14 @@ jobs:
           path: dist
 
   deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

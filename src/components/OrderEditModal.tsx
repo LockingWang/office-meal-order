@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { Order, OrderType } from "../api";
 import styles from "./OrderEditModal.module.css";
+import { LoadingOverlay } from "./LoadingOverlay";
+import { toUserFacingErrorMessage } from "../utils/userFacingError";
 
 export const ICE_OPTIONS = [
   "正常冰",
@@ -136,13 +138,15 @@ export function OrderEditModal({
     try {
       await onSubmit(trimmed);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "送出失敗");
+      setError(toUserFacingErrorMessage(err, "送出失敗，請稍後再試。"));
+    } finally {
       setSubmitting(false);
-      return;
     }
   }
 
   return (
+    <>
+      <LoadingOverlay show={submitting} variant="submit" />
     <div
       className={styles.backdrop}
       role="dialog"
@@ -315,5 +319,6 @@ export function OrderEditModal({
         </form>
       </div>
     </div>
+    </>
   );
 }

@@ -10,8 +10,10 @@ import { NameModal } from "./components/NameModal";
 import { MonthlyFloaters } from "./components/MonthlyFloaters";
 import { ThemeApplier } from "./components/ThemeApplier";
 import { ThemePicker } from "./components/ThemePicker";
+import { LoadingOverlay } from "./components/LoadingOverlay";
 import { useUserName } from "./hooks/useUserName";
 import { useMonthlyTheme } from "./hooks/useMonthlyTheme";
+import { toUserFacingErrorMessage } from "./utils/userFacingError";
 export default function App() {
     const configured = isConfigured();
     const { userName, setUserName, ready: userReady } = useUserName();
@@ -37,7 +39,7 @@ export default function App() {
             setItems((prev) => ({ ...prev, [status]: list }));
         }
         catch (err) {
-            setLoadError(err instanceof Error ? err.message : "讀取失敗");
+            setLoadError(toUserFacingErrorMessage(err, "無法載入團購單，請稍後再試。"));
         }
         finally {
             setLoading((prev) => ({ ...prev, [status]: false }));
@@ -61,7 +63,10 @@ export default function App() {
             return;
         await Promise.all([load("active"), load("closed")]);
     }
-    return (_jsxs(_Fragment, { children: [_jsx(ThemeApplier, { theme: theme }), _jsx(MonthlyFloaters, { theme: theme }), _jsx(Mascots, {}), _jsxs("div", { className: styles.page, children: [_jsxs("header", { className: styles.appHeader, children: [_jsxs("div", { className: styles.brand, children: [_jsx("p", { className: styles.badge, children: "Office Lunch Time" }), _jsx("h1", { className: styles.title, children: "\u4ECA\u5929\u60F3\u5403\u4EC0\u9EBC\u5440\uFF1F" }), _jsxs("span", { className: styles.themeChip, title: "\u6703\u4F9D\u7576\u6708\u7BC0\u6C23\u81EA\u52D5\u5207\u63DB\u4E3B\u984C\u8272", children: [_jsx("span", { className: styles.themeEmoji, "aria-hidden": "true", children: theme.accentEmoji }), theme.label, " \u00B7 ", theme.seasonLabel] })] }), _jsxs("div", { className: styles.headerRight, children: [_jsx(ThemePicker, { manualMonth: manualMonth, currentMonth: realMonth, onChange: setManualMonth }), userName && (_jsxs("button", { type: "button", className: styles.userChip, onClick: () => setNameModalMode("edit"), title: "\u4FEE\u6539\u540D\u5B57", children: [_jsx("span", { className: styles.userLabel, children: "\u540D\u5B57" }), _jsx("span", { className: styles.userName, children: userName })] })), _jsx("button", { type: "button", className: styles.heroBtn, onClick: () => {
+    const listLoading = configured &&
+        openSheet == null &&
+        (loading.active || loading.closed);
+    return (_jsxs(_Fragment, { children: [_jsx(LoadingOverlay, { show: listLoading, variant: "data" }), _jsx(ThemeApplier, { theme: theme }), _jsx(MonthlyFloaters, { theme: theme }), _jsx(Mascots, {}), _jsxs("div", { className: styles.page, children: [_jsxs("header", { className: styles.appHeader, children: [_jsxs("div", { className: styles.brand, children: [_jsx("p", { className: styles.badge, children: "Office Lunch Time" }), _jsx("h1", { className: styles.title, children: "\u4ECA\u5929\u60F3\u5403\u4EC0\u9EBC\u5440\uFF1F" }), _jsxs("span", { className: styles.themeChip, title: "\u6703\u4F9D\u7576\u6708\u7BC0\u6C23\u81EA\u52D5\u5207\u63DB\u4E3B\u984C\u8272", children: [_jsx("span", { className: styles.themeEmoji, "aria-hidden": "true", children: theme.accentEmoji }), theme.label, " \u00B7 ", theme.seasonLabel] })] }), _jsxs("div", { className: styles.headerRight, children: [_jsx(ThemePicker, { manualMonth: manualMonth, currentMonth: realMonth, onChange: setManualMonth }), userName && (_jsxs("button", { type: "button", className: styles.userChip, onClick: () => setNameModalMode("edit"), title: "\u4FEE\u6539\u540D\u5B57", children: [_jsx("span", { className: styles.userLabel, children: "\u540D\u5B57" }), _jsx("span", { className: styles.userName, children: userName })] })), _jsx("button", { type: "button", className: styles.heroBtn, onClick: () => {
                                             if (!userName) {
                                                 setNameModalMode("first");
                                                 return;

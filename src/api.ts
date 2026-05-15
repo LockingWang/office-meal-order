@@ -1,3 +1,5 @@
+import { tryParseJsonErrorField } from "./utils/userFacingError";
+
 export type OrderType = "food" | "drink";
 export type GroupOrderStatus = "active" | "closed";
 
@@ -82,7 +84,14 @@ async function getFromAppsScript(
   const url = new URL(base);
   Object.keys(params).forEach((k) => url.searchParams.set(k, params[k]));
   const res = await fetch(url.toString(), { method: "GET" });
-  if (!res.ok) throw new Error(`讀取失敗 (${res.status})`);
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    const parsed = tryParseJsonErrorField(text);
+    if (parsed) throw new Error(parsed);
+    throw new Error(
+      `無法讀取資料（錯誤碼 ${res.status}）。請確認 Apps Script 已部署且網址正確。`
+    );
+  }
   return res.json();
 }
 
@@ -167,11 +176,19 @@ async function postAction(
   failMsg: string
 ): Promise<Record<string, unknown>> {
   const base = getScriptUrl();
-  if (!base) throw new Error("尚未設定 VITE_APPS_SCRIPT_URL");
+  if (!base) {
+    throw new Error(
+      "尚未連結 Google 試算表腳本，請在網站設定中填寫正確的腳本網址。"
+    );
+  }
   const res = await postToAppsScript(base, data);
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(text || `${failMsg} (${res.status})`);
+    const parsed = tryParseJsonErrorField(text);
+    if (parsed) throw new Error(parsed);
+    throw new Error(
+      `無法送出資料（錯誤碼 ${res.status}）。請確認 Apps Script 已部署為新版本。`
+    );
   }
   const json = (await res.json().catch(() => null)) as Record<
     string,
@@ -189,7 +206,7 @@ export async function createGroupOrder(
 ): Promise<{ sheetName: string }> {
   const json = await postAction(
     { action: "createGroupOrder", ...payload },
-    "建立團購單失敗"
+    "建立團購單失敗，請稍後再試。"
   );
   return { sheetName: String(json.sheetName || "") };
 }
@@ -199,13 +216,13 @@ export async function submitOrder(
 ): Promise<{ orderId: string }> {
   const json = await postAction(
     { action: "submitOrder", ...payload },
-    "送出訂單失敗"
+    "送出訂單失敗，請稍後再試。"
   );
   return { orderId: String(json.orderId || "") };
 }
 
 export async function updateOrder(payload: UpdateOrderPayload): Promise<void> {
-  await postAction({ action: "updateOrder", ...payload }, "更新訂單失敗");
+  await postAction({ action: "updateOrder", ...payload }, "更新訂單失敗，請稍後再試。");
 }
 
 export async function deleteOrder(
@@ -214,20 +231,20 @@ export async function deleteOrder(
 ): Promise<void> {
   await postAction(
     { action: "deleteOrder", sheetName, orderId },
-    "刪除訂單失敗"
+    "刪除訂單失敗，請稍後再試。"
   );
 }
 
 export async function closeGroupOrder(sheetName: string): Promise<void> {
   await postAction(
     { action: "closeGroupOrder", sheetName },
-    "結案失敗"
+    "結案失敗，請稍後再試。"
   );
 }
 
 export async function reopenGroupOrder(sheetName: string): Promise<void> {
   await postAction(
     { action: "reopenGroupOrder", sheetName },
-    "復活失敗"
+    "復活失敗，請稍後再試。"
   );
 }

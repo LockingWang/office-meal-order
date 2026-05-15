@@ -1,3 +1,4 @@
+import { tryParseJsonErrorField } from "./utils/userFacingError";
 function getScriptUrl() {
     const url = import.meta.env.VITE_APPS_SCRIPT_URL?.trim();
     return url || undefined;
@@ -18,8 +19,13 @@ async function getFromAppsScript(base, params) {
     const url = new URL(base);
     Object.keys(params).forEach((k) => url.searchParams.set(k, params[k]));
     const res = await fetch(url.toString(), { method: "GET" });
-    if (!res.ok)
-        throw new Error(`讀取失敗 (${res.status})`);
+    if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        const parsed = tryParseJsonErrorField(text);
+        if (parsed)
+            throw new Error(parsed);
+        throw new Error(`無法讀取資料（錯誤碼 ${res.status}）。請確認 Apps Script 已部署且網址正確。`);
+    }
     return res.json();
 }
 function normalizeMeta(raw) {
@@ -102,12 +108,16 @@ export async function fetchGroupOrderDetail(sheetName) {
 }
 async function postAction(data, failMsg) {
     const base = getScriptUrl();
-    if (!base)
-        throw new Error("尚未設定 VITE_APPS_SCRIPT_URL");
+    if (!base) {
+        throw new Error("尚未連結 Google 試算表腳本，請在網站設定中填寫正確的腳本網址。");
+    }
     const res = await postToAppsScript(base, data);
     if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(text || `${failMsg} (${res.status})`);
+        const parsed = tryParseJsonErrorField(text);
+        if (parsed)
+            throw new Error(parsed);
+        throw new Error(`無法送出資料（錯誤碼 ${res.status}）。請確認 Apps Script 已部署為新版本。`);
     }
     const json = (await res.json().catch(() => null));
     if (!json)
@@ -118,22 +128,22 @@ async function postAction(data, failMsg) {
     return json;
 }
 export async function createGroupOrder(payload) {
-    const json = await postAction({ action: "createGroupOrder", ...payload }, "建立團購單失敗");
+    const json = await postAction({ action: "createGroupOrder", ...payload }, "建立團購單失敗，請稍後再試。");
     return { sheetName: String(json.sheetName || "") };
 }
 export async function submitOrder(payload) {
-    const json = await postAction({ action: "submitOrder", ...payload }, "送出訂單失敗");
+    const json = await postAction({ action: "submitOrder", ...payload }, "送出訂單失敗，請稍後再試。");
     return { orderId: String(json.orderId || "") };
 }
 export async function updateOrder(payload) {
-    await postAction({ action: "updateOrder", ...payload }, "更新訂單失敗");
+    await postAction({ action: "updateOrder", ...payload }, "更新訂單失敗，請稍後再試。");
 }
 export async function deleteOrder(sheetName, orderId) {
-    await postAction({ action: "deleteOrder", sheetName, orderId }, "刪除訂單失敗");
+    await postAction({ action: "deleteOrder", sheetName, orderId }, "刪除訂單失敗，請稍後再試。");
 }
 export async function closeGroupOrder(sheetName) {
-    await postAction({ action: "closeGroupOrder", sheetName }, "結案失敗");
+    await postAction({ action: "closeGroupOrder", sheetName }, "結案失敗，請稍後再試。");
 }
 export async function reopenGroupOrder(sheetName) {
-    await postAction({ action: "reopenGroupOrder", sheetName }, "復活失敗");
+    await postAction({ action: "reopenGroupOrder", sheetName }, "復活失敗，請稍後再試。");
 }

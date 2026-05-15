@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { closeGroupOrder, deleteOrder, fetchGroupOrderDetail, reopenGroupOrder, submitOrder, updateOrder, } from "../api";
 import { OrderEditModal } from "./OrderEditModal";
 import styles from "./GroupOrderDetailModal.module.css";
+import { LoadingOverlay } from "./LoadingOverlay";
+import { toUserFacingErrorMessage } from "../utils/userFacingError";
 export function GroupOrderDetailModal({ open, sheetName, userName, onClose, onChanged, }) {
     const [detail, setDetail] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -21,7 +23,7 @@ export function GroupOrderDetailModal({ open, sheetName, userName, onClose, onCh
             setDetail(d);
         }
         catch (err) {
-            setLoadError(err instanceof Error ? err.message : "讀取失敗");
+            setLoadError(toUserFacingErrorMessage(err, "無法載入團購內容，請稍後再試。"));
             setDetail(null);
         }
         finally {
@@ -119,7 +121,7 @@ export function GroupOrderDetailModal({ open, sheetName, userName, onClose, onCh
         catch (err) {
             setActionMsg({
                 type: "err",
-                text: err instanceof Error ? err.message : "刪除失敗",
+                text: toUserFacingErrorMessage(err, "刪除訂單失敗，請稍後再試。"),
             });
         }
         finally {
@@ -142,7 +144,7 @@ export function GroupOrderDetailModal({ open, sheetName, userName, onClose, onCh
         catch (err) {
             setActionMsg({
                 type: "err",
-                text: err instanceof Error ? err.message : "結案失敗",
+                text: toUserFacingErrorMessage(err, "結案失敗，請稍後再試。"),
             });
         }
         finally {
@@ -165,7 +167,7 @@ export function GroupOrderDetailModal({ open, sheetName, userName, onClose, onCh
         catch (err) {
             setActionMsg({
                 type: "err",
-                text: err instanceof Error ? err.message : "復活失敗",
+                text: toUserFacingErrorMessage(err, "復活失敗，請稍後再試。"),
             });
         }
         finally {
@@ -175,7 +177,7 @@ export function GroupOrderDetailModal({ open, sheetName, userName, onClose, onCh
     return (_jsxs("div", { className: styles.backdrop, role: "dialog", "aria-modal": "true", onClick: (e) => {
             if (e.target === e.currentTarget && !actionBusy)
                 onClose();
-        }, children: [_jsxs("div", { className: styles.panel, children: [_jsxs("div", { className: styles.topBar, children: [_jsx("button", { type: "button", className: styles.backBtn, onClick: onClose, disabled: actionBusy, children: "\u2190 \u8FD4\u56DE\u5217\u8868" }), meta && !isClosed && (_jsx("button", { type: "button", className: styles.dangerBtn, onClick: handleClose, disabled: actionBusy, children: "\u7D50\u6848" })), meta && isClosed && (_jsx("button", { type: "button", className: styles.reopenBtn, onClick: handleReopen, disabled: actionBusy, children: "\u5FA9\u6D3B" }))] }), _jsxs("div", { className: styles.content, children: [loading && !detail && (_jsx("p", { className: styles.muted, children: "\u8B80\u53D6\u4E2D\u2026" })), loadError && !detail && (_jsx("p", { className: styles.err, children: loadError })), meta && (_jsxs(_Fragment, { children: [_jsxs("section", { className: styles.metaCard, children: [_jsx("div", { className: styles.headerRow, children: _jsxs("h2", { className: styles.name, children: [meta.name, _jsx("span", { className: `${styles.typeTag} ${isDrink ? styles.typeTagDrink : styles.typeTagFood}`, children: isDrink ? "飲料單" : "食物單" }), isClosed && (_jsx("span", { className: styles.closedTag, children: "\u5DF2\u7D50\u6848" }))] }) }), _jsxs("p", { className: styles.metaLine, children: [_jsx("span", { className: styles.metaLabel, children: "\u4E3B\u63EA" }), _jsx("span", { children: meta.host || "—" })] }), meta.deadline && (_jsxs("p", { className: styles.metaLine, children: [_jsx("span", { className: styles.metaLabel, children: "\u622A\u6B62" }), _jsx("span", { children: meta.deadline })] })), isClosed && meta.closedAt && (_jsxs("p", { className: styles.metaLine, children: [_jsx("span", { className: styles.metaLabel, children: "\u7D50\u6848" }), _jsx("span", { children: meta.closedAt })] })), meta.imageUrl ? (_jsx("a", { href: meta.imageUrl, target: "_blank", rel: "noopener noreferrer", className: styles.imageWrap, children: _jsx("img", { className: styles.menuImage, src: meta.imageUrl, alt: `${meta.name} 菜單`, loading: "lazy" }) })) : (_jsx("p", { className: styles.mutedSmall, children: "\u6C92\u6709\u83DC\u55AE\u5716\u7247\u3002" }))] }), _jsxs("section", { className: styles.ordersCard, children: [_jsxs("div", { className: styles.ordersHeader, children: [_jsxs("h3", { className: styles.ordersTitle, children: ["\u6240\u6709\u8A02\u55AE", " ", _jsxs("span", { className: styles.orderCount, children: [orders.length, " \u7B46"] })] }), !isClosed && (_jsx("button", { type: "button", className: styles.addOrderBtn, onClick: () => setCreateOpen(true), disabled: actionBusy, children: "+ \u65B0\u589E\u8A02\u55AE" }))] }), actionMsg && (_jsx("p", { className: actionMsg.type === "ok" ? styles.okMsg : styles.errMsg, role: "status", children: actionMsg.text })), orders.length === 0 ? (_jsx("p", { className: styles.muted, children: isClosed ? "這份團購單沒有訂單。" : "還沒有人下單，當第一位吧！" })) : (_jsx("ul", { className: styles.orderList, children: orders.map((o) => {
+        }, children: [_jsx(LoadingOverlay, { show: loading || actionBusy, variant: actionBusy ? "submit" : "data" }), _jsxs("div", { className: styles.panel, children: [_jsxs("div", { className: styles.topBar, children: [_jsx("button", { type: "button", className: styles.backBtn, onClick: onClose, disabled: actionBusy, children: "\u2190 \u8FD4\u56DE\u5217\u8868" }), meta && !isClosed && (_jsx("button", { type: "button", className: styles.dangerBtn, onClick: handleClose, disabled: actionBusy, children: "\u7D50\u6848" })), meta && isClosed && (_jsx("button", { type: "button", className: styles.reopenBtn, onClick: handleReopen, disabled: actionBusy, children: "\u5FA9\u6D3B" }))] }), _jsxs("div", { className: styles.content, children: [loadError && !detail && (_jsx("p", { className: styles.err, children: loadError })), meta && (_jsxs(_Fragment, { children: [_jsxs("section", { className: styles.metaCard, children: [_jsx("div", { className: styles.headerRow, children: _jsxs("h2", { className: styles.name, children: [meta.name, _jsx("span", { className: `${styles.typeTag} ${isDrink ? styles.typeTagDrink : styles.typeTagFood}`, children: isDrink ? "飲料單" : "食物單" }), isClosed && (_jsx("span", { className: styles.closedTag, children: "\u5DF2\u7D50\u6848" }))] }) }), _jsxs("p", { className: styles.metaLine, children: [_jsx("span", { className: styles.metaLabel, children: "\u4E3B\u63EA" }), _jsx("span", { children: meta.host || "—" })] }), meta.deadline && (_jsxs("p", { className: styles.metaLine, children: [_jsx("span", { className: styles.metaLabel, children: "\u622A\u6B62" }), _jsx("span", { children: meta.deadline })] })), isClosed && meta.closedAt && (_jsxs("p", { className: styles.metaLine, children: [_jsx("span", { className: styles.metaLabel, children: "\u7D50\u6848" }), _jsx("span", { children: meta.closedAt })] })), meta.imageUrl ? (_jsx("a", { href: meta.imageUrl, target: "_blank", rel: "noopener noreferrer", className: styles.imageWrap, children: _jsx("img", { className: styles.menuImage, src: meta.imageUrl, alt: `${meta.name} 菜單`, loading: "lazy" }) })) : (_jsx("p", { className: styles.mutedSmall, children: "\u6C92\u6709\u83DC\u55AE\u5716\u7247\u3002" }))] }), _jsxs("section", { className: styles.ordersCard, children: [_jsxs("div", { className: styles.ordersHeader, children: [_jsxs("h3", { className: styles.ordersTitle, children: ["\u6240\u6709\u8A02\u55AE", " ", _jsxs("span", { className: styles.orderCount, children: [orders.length, " \u7B46"] })] }), !isClosed && (_jsx("button", { type: "button", className: styles.addOrderBtn, onClick: () => setCreateOpen(true), disabled: actionBusy, children: "+ \u65B0\u589E\u8A02\u55AE" }))] }), actionMsg && (_jsx("p", { className: actionMsg.type === "ok" ? styles.okMsg : styles.errMsg, role: "status", children: actionMsg.text })), orders.length === 0 ? (_jsx("p", { className: styles.muted, children: isClosed ? "這份團購單沒有訂單。" : "還沒有人下單，當第一位吧！" })) : (_jsx("ul", { className: styles.orderList, children: orders.map((o) => {
                                                     const isMine = o.name === userName && !!userName;
                                                     const subtotal = typeof o.price === "number"
                                                         ? o.price * (o.quantity || 0)

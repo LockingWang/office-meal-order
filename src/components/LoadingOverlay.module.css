@@ -1,0 +1,110 @@
+.root {
+  position: fixed;
+  inset: 0;
+  /* 高於各種 modal（最高 220），但不必過高；僅在載入時阻擋操作 */
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+  background: rgba(40, 45, 38, 0.16);
+  backdrop-filter: blur(2px);
+}
+
+/* —— 載入資料：文案與彩虹貓垂直堆疊、整組置中；貓略右移以對齊視覺重心（彩虹偏左） —— */
+.dataColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* 文案與貼近；Lottie 檔常帶上方透明區，用 flyArena 負 margin 補 */
+  gap: 0.06rem;
+  width: max-content;
+  max-width: min(92vw, 360px);
+  padding: 0.5rem 1rem;
+  box-sizing: border-box;
+  --cat-size: min(168px, 42vw);
+}
+
+.flyArena {
+  position: relative;
+  width: var(--cat-size);
+  height: var(--cat-size);
+  flex-shrink: 0;
+  margin-top: -0.55rem;
+  /* Lottie 檔案內彩虹多在左側，整體視覺中心略偏左，向右微調與上方文案對齊 */
+  transform: translateX(clamp(8px, 2.5vw, 16px));
+}
+
+.lottieFly {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.caption {
+  margin: 0;
+  margin-bottom: -3rem;
+  pointer-events: none;
+  font-size: clamp(1.05rem, 3.2vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text, #3d4b33);
+  text-align: center;
+  white-space: nowrap;
+  padding: 0.4rem 1.1rem 0.24rem;
+  background: rgba(251, 250, 238, 0.94);
+  border: 1px solid rgba(60, 70, 50, 0.14);
+  border-radius: 999px;
+  box-shadow:
+    0 4px 18px rgba(60, 70, 50, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.65) inset;
+}
+
+/* —— 送出：維持中央翻滾 —— */
+.stage {
+  position: relative;
+  width: min(280px, 72vw);
+  height: min(220px, 40vh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lottie {
+  width: 100%;
+  height: 100%;
+  max-width: 260px;
+  max-height: 200px;
+}
+
+.roll {
+  animation: rollRl 2.8s linear infinite;
+}
+
+@keyframes rollRl {
+  0% {
+    transform: translateX(calc(30vw - 0px)) rotate(0deg);
+  }
+  100% {
+    transform: translateX(calc(-30vw + 0px)) rotate(-720deg);
+  }
+}
+
+@media (max-width: 520px) {
+  @keyframes rollRl {
+    0% {
+      transform: translateX(45vw) rotate(0deg);
+    }
+    100% {
+      transform: translateX(-45vw) rotate(-720deg);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roll {
+    animation: none;
+    transform: none;
+  }
+}

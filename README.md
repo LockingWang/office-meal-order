@@ -91,19 +91,23 @@ npm run build
 
 本倉庫已內建 [GitHub Actions](https://docs.github.com/zh/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#publishing-with-a-custom-github-actions-workflow) 工作流程：`.github/workflows/deploy-pages.yml`。每次推送到 `main` 或 `master` 會建置並發佈到 GitHub Pages。
 
-### 你需要做的設定
+### 你需要做的設定（順序很重要）
 
-1. **在 GitHub 建立 Secret（必要）**  
-   進入 Repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**  
+1. **先啟用 GitHub Pages，並指定來源為「GitHub Actions」**（不做這步，`deploy-pages` 會 **404 Not Found**）  
+   開啟：<https://github.com/LockingWang/office-meal-order/settings/pages>  
+   - **Build and deployment** → **Source** 選 **GitHub Actions**（不要選 *Deploy from a branch*）。  
+   - 若有 **Visibility** 選項，依需求選擇後儲存。  
+   存檔後再跑 workflow，否則會出現：`Creating Pages deployment failed` / `HttpError: Not Found`。
+
+2. **在 GitHub 建立 Secret（讓線上網頁能呼叫試算表）**  
+   Repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**  
    - Name：`VITE_APPS_SCRIPT_URL`  
    - Value：你的 Apps Script 網址（與本機 `.env.local` 相同，`/exec` 結尾）。  
    沒有這個 secret 時，建置仍會成功，但線上網頁會顯示「尚未連結試算表」。
 
-2. **開啟 GitHub Pages 來源**  
-   Repo → **Settings** → **Pages** → **Build and deployment** → **Source** 選 **GitHub Actions**（不要選 Deploy from a branch）。
-
-3. **推程式碼**  
-   將變更推送到 `main`（或 `master`）。到 **Actions** 分頁確認 **Deploy GitHub Pages** 綠燈。
+3. **推程式碼或手動重跑**  
+   將變更推送到 `main`（或 `master`）。若你曾先 push 過但 deploy 失敗，到 **Actions** 選該 workflow → **Re-run all jobs**。  
+   到 **Actions** 分頁確認 **Deploy GitHub Pages** 綠燈。
 
 4. **開啟網址**  
    專案站網址為：  
@@ -111,6 +115,15 @@ npm run build
    例如倉庫為 [LockingWang/office-meal-order](https://github.com/LockingWang/office-meal-order) 時，通常是：  
    `https://lockingwang.github.io/office-meal-order/`  
    （實際網址以 **Settings → Pages** 顯示的為準。）
+
+### 故障排除：`deploy-pages` 404、Ensure GitHub Pages has been enabled`
+
+代表 **Pages 尚未用「GitHub Actions」當發佈來源**，或設定尚未寫入完成。請依序檢查：
+
+- 已開啟 [Pages 設定](https://github.com/LockingWang/office-meal-order/settings/pages)，且 **Source = GitHub Actions**。  
+- 不是 fork 到別人帳號後忘了在自己 fork 上開 Pages（每個 fork 都要各自設定）。  
+- 若為 **Organization** 底下的 repo，請確認組織未關閉 GitHub Pages，且你有權限變更 Pages 設定。  
+- 修正後到 **Actions** 對失敗的那次執行按 **Re-run failed jobs** 或 **Re-run all jobs**。
 
 ### 本機模擬 GitHub Pages 路徑
 

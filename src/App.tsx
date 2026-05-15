@@ -14,8 +14,10 @@ import { NameModal } from "./components/NameModal";
 import { MonthlyFloaters } from "./components/MonthlyFloaters";
 import { ThemeApplier } from "./components/ThemeApplier";
 import { ThemePicker } from "./components/ThemePicker";
+import { LoadingOverlay } from "./components/LoadingOverlay";
 import { useUserName } from "./hooks/useUserName";
 import { useMonthlyTheme } from "./hooks/useMonthlyTheme";
+import { toUserFacingErrorMessage } from "./utils/userFacingError";
 
 export default function App() {
   const configured = isConfigured();
@@ -48,7 +50,9 @@ export default function App() {
         const list = await fetchGroupOrders(status);
         setItems((prev) => ({ ...prev, [status]: list }));
       } catch (err) {
-        setLoadError(err instanceof Error ? err.message : "讀取失敗");
+        setLoadError(
+          toUserFacingErrorMessage(err, "無法載入團購單，請稍後再試。")
+        );
       } finally {
         setLoading((prev) => ({ ...prev, [status]: false }));
       }
@@ -74,8 +78,14 @@ export default function App() {
     await Promise.all([load("active"), load("closed")]);
   }
 
+  const listLoading =
+    configured &&
+    openSheet == null &&
+    (loading.active || loading.closed);
+
   return (
     <>
+      <LoadingOverlay show={listLoading} variant="data" />
       <ThemeApplier theme={theme} />
       <MonthlyFloaters theme={theme} />
       <Mascots />

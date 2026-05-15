@@ -11,6 +11,8 @@ import {
 } from "../api";
 import { OrderEditModal, type OrderDraft } from "./OrderEditModal";
 import styles from "./GroupOrderDetailModal.module.css";
+import { LoadingOverlay } from "./LoadingOverlay";
+import { toUserFacingErrorMessage } from "../utils/userFacingError";
 
 export function GroupOrderDetailModal({
   open,
@@ -44,7 +46,9 @@ export function GroupOrderDetailModal({
       const d = await fetchGroupOrderDetail(sheetName);
       setDetail(d);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "讀取失敗");
+      setLoadError(
+        toUserFacingErrorMessage(err, "無法載入團購內容，請稍後再試。")
+      );
       setDetail(null);
     } finally {
       setLoading(false);
@@ -141,7 +145,7 @@ export function GroupOrderDetailModal({
     } catch (err) {
       setActionMsg({
         type: "err",
-        text: err instanceof Error ? err.message : "刪除失敗",
+        text: toUserFacingErrorMessage(err, "刪除訂單失敗，請稍後再試。"),
       });
     } finally {
       setActionBusy(false);
@@ -161,7 +165,7 @@ export function GroupOrderDetailModal({
     } catch (err) {
       setActionMsg({
         type: "err",
-        text: err instanceof Error ? err.message : "結案失敗",
+        text: toUserFacingErrorMessage(err, "結案失敗，請稍後再試。"),
       });
     } finally {
       setActionBusy(false);
@@ -181,7 +185,7 @@ export function GroupOrderDetailModal({
     } catch (err) {
       setActionMsg({
         type: "err",
-        text: err instanceof Error ? err.message : "復活失敗",
+        text: toUserFacingErrorMessage(err, "復活失敗，請稍後再試。"),
       });
     } finally {
       setActionBusy(false);
@@ -197,6 +201,10 @@ export function GroupOrderDetailModal({
         if (e.target === e.currentTarget && !actionBusy) onClose();
       }}
     >
+      <LoadingOverlay
+        show={loading || actionBusy}
+        variant={actionBusy ? "submit" : "data"}
+      />
       <div className={styles.panel}>
         <div className={styles.topBar}>
           <button
@@ -231,9 +239,6 @@ export function GroupOrderDetailModal({
         </div>
 
         <div className={styles.content}>
-          {loading && !detail && (
-            <p className={styles.muted}>讀取中…</p>
-          )}
           {loadError && !detail && (
             <p className={styles.err}>{loadError}</p>
           )}

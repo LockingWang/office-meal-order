@@ -3,7 +3,8 @@
   inset: 0;
   pointer-events: none;
   overflow: hidden;
-  z-index: 5;
+  /* 必須低於主內容 .page（z-index:2），避免 Lottie 遮住表單與按鈕 */
+  z-index: 0;
 }
 
 .lottie {
