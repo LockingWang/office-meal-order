@@ -64,6 +64,8 @@ export function MealFortuneModal({
 }) {
   const titleId = useId();
   const [birthDate, setBirthDate] = useState("");
+  /** 空字串 = 不提供 */
+  const [gender, setGender] = useState("");
   const [mood, setMood] = useState("");
   const [otherNeeds, setOtherNeeds] = useState("");
   const [loading, setLoading] = useState(false);
@@ -72,6 +74,7 @@ export function MealFortuneModal({
 
   const resetForm = useCallback(() => {
     setBirthDate("");
+    setGender("");
     setMood("");
     setOtherNeeds("");
     setError(null);
@@ -111,12 +114,13 @@ export function MealFortuneModal({
     setResult(null);
     try {
       const text = await fetchMealFortune({
-        groupTitle: meta.name,
+        storeName: meta.name,
         orderTypeLabel,
         menuImageUrl: meta.imageUrl || null,
         deadline: meta.deadline || null,
         host: meta.host || null,
         userName: userName || "匿名",
+        gender: gender.trim() || null,
         birthDate,
         mood: mood.trim(),
         otherNeeds: otherNeeds.trim(),
@@ -124,9 +128,7 @@ export function MealFortuneModal({
       });
       setResult(text);
     } catch (err) {
-      setError(
-        toUserFacingErrorMessage(err, "占卜失敗，請稍後再試或檢查 API 金鑰。")
-      );
+      setError(toUserFacingErrorMessage(err, "占卜失敗，請稍後再試。"));
     } finally {
       setLoading(false);
     }
@@ -135,15 +137,16 @@ export function MealFortuneModal({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div
-      className={styles.backdrop}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !loading) handleClose();
-      }}
-    >
+    <>
+      <div
+        className={styles.backdrop}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onClick={(e) => {
+          if (e.target === e.currentTarget && !loading) handleClose();
+        }}
+      >
       <div className={styles.panel} onClick={(e) => e.stopPropagation()}>
         <div className={styles.head}>
           <div>
@@ -164,110 +167,133 @@ export function MealFortuneModal({
           </button>
         </div>
 
-        <div className={styles.mysticArea}>
-          {loading ? (
-            <DotLottieReact
-              src={FORTUNE_PSYCHIC_LOTTIE}
-              loop
-              autoplay
-              className={styles.lottie}
-            />
+        <div className={styles.panelScroll}>
+          {error && (
+            <p className={styles.err} role="alert">
+              {error}
+            </p>
+          )}
+
+          {result ? (
+            <>
+              <FortuneSections text={result} />
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.secondaryBtn}
+                  onClick={() => {
+                    setResult(null);
+                    setError(null);
+                  }}
+                  disabled={loading}
+                >
+                  再占一次
+                </button>
+              </div>
+            </>
           ) : (
-            <div className={styles.idle}>
-              <span className={styles.idleIcon} aria-hidden>
-                🔮
-              </span>
-              送出占卜後，占卜師會開始為你解讀…
+            <div className={styles.form}>
+              <div className={styles.rowBirthGender}>
+                <div className={`${styles.field} ${styles.fieldBirth}`}>
+                  <label className={styles.label} htmlFor="fortune-birth">
+                    請輸入您的出生年月日
+                  </label>
+                  <input
+                    id="fortune-birth"
+                    className={styles.input}
+                    type="date"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                    disabled={loading}
+                    max={new Date().toISOString().slice(0, 10)}
+                  />
+                </div>
+                <div className={`${styles.field} ${styles.fieldGender}`}>
+                  <label className={styles.label} htmlFor="fortune-gender">
+                    性別（選填）
+                  </label>
+                  <select
+                    id="fortune-gender"
+                    className={styles.input}
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    disabled={loading}
+                  >
+                    <option value="">不提供</option>
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                    <option value="非二元／其他">非二元／其他</option>
+                    <option value="不想透露">不想透露</option>
+                  </select>
+                </div>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="fortune-mood">
+                  今天的心情
+                </label>
+                <textarea
+                  id="fortune-mood"
+                  className={styles.textarea}
+                  rows={2}
+                  placeholder="例如：有點累但想吃療癒的、趕時間想快點決定…"
+                  value={mood}
+                  onChange={(e) => setMood(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="fortune-other">
+                  其他需求（選填）
+                </label>
+                <textarea
+                  id="fortune-other"
+                  className={styles.textarea}
+                  rows={2}
+                  placeholder="例如：不吃牛、預算約 120 內、想試沒喝過的…"
+                  value={otherNeeds}
+                  onChange={(e) => setOtherNeeds(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
             </div>
           )}
         </div>
 
-        {error && (
-          <p className={styles.err} role="alert">
-            {error}
-          </p>
-        )}
-
-        {result ? (
-          <>
-            <FortuneSections text={result} />
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.secondaryBtn}
-                onClick={() => {
-                  setResult(null);
-                  setError(null);
-                }}
-                disabled={loading}
-              >
-                再占一次
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className={styles.form}>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="fortune-birth">
-                請輸入您的出生年月日
-              </label>
-              <input
-                id="fortune-birth"
-                className={styles.input}
-                type="date"
-                value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-                disabled={loading}
-                max={new Date().toISOString().slice(0, 10)}
-              />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="fortune-mood">
-                今天的心情
-              </label>
-              <textarea
-                id="fortune-mood"
-                className={styles.textarea}
-                rows={2}
-                placeholder="例如：有點累但想吃療癒的、趕時間想快點決定…"
-                value={mood}
-                onChange={(e) => setMood(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="fortune-other">
-                其他需求（選填）
-              </label>
-              <textarea
-                id="fortune-other"
-                className={styles.textarea}
-                rows={2}
-                placeholder="例如：不吃牛、預算約 120 內、想試沒喝過的…"
-                value={otherNeeds}
-                onChange={(e) => setOtherNeeds(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-            <p className={styles.hint}>
-              需在本機或部署環境設定{" "}
-              <code style={{ fontSize: "0.72em" }}>VITE_OPENAI_API_KEY</code>
-              。金鑰會由瀏覽器送出，僅建議內部或測試用途；正式環境請改由後端代理。
-            </p>
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.submitBtn}
-                onClick={() => void handleSubmit()}
-                disabled={loading}
-              >
-                {loading ? "占卜中…" : "送出占卜"}
-              </button>
-            </div>
+        {!result && (
+          <div className={styles.footerBar}>
+            <button
+              type="button"
+              className={styles.submitBtn}
+              onClick={() => void handleSubmit()}
+              disabled={loading}
+            >
+              {loading ? "占卜中…" : "送出占卜"}
+            </button>
           </div>
         )}
       </div>
-    </div>,
+    </div>
+      {loading && (
+        <div
+          className={styles.ritualLayer}
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+          aria-label="占卜進行中"
+        >
+          <div className={styles.ritualVeil} aria-hidden />
+          <div className={styles.ritualVeil2} aria-hidden />
+          <div className={styles.ritualStage}>
+            <DotLottieReact
+              src={FORTUNE_PSYCHIC_LOTTIE}
+              loop
+              autoplay
+              className={styles.ritualLottie}
+            />
+          </div>
+        </div>
+      )}
+    </>,
     document.body
   );
 }

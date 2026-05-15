@@ -2,7 +2,8 @@
  * 貼到 Google Apps Script（與試算表綁定的專案），部署為「網路應用程式」後，
  * 將網址填入前端 .env.local 的 VITE_APPS_SCRIPT_URL。
  *
- * 試算表結構：每一輪團購＝一張工作表，命名規則「團購_YYYY-MM-DD_<標題>」。
+ * 試算表結構：每一輪團購＝一張工作表，命名規則「團購單名稱_主揪名稱_YYYY-MM-DD」
+ * （若同名同日重複建立，結尾會加上 -2、-3…）。名稱內不允許的符號會替換為空白，底線僅用於三段分隔。
  *
  * 每張工作表：
  *   A1 團購單名稱       | B1 <名稱>
@@ -19,7 +20,6 @@
  *   第 10 列起：訂單資料
  */
 
-var SHEET_PREFIX = "團購_";
 var ORDER_HEADER_ROW = 9;
 var ORDER_FIRST_ROW = 10;
 var MESSAGE_HEADER = "給團長的話";
@@ -109,8 +109,27 @@ function nowString_() {
   );
 }
 
+/** 團購工作表：團購單名稱_主揪名稱_YYYY-MM-DD，同名同日可為 …-2、…-3（由最後一個 _ 起為日期段） */
+function isGroupOrderSheetName_(n) {
+  if (!n || typeof n !== "string") return false;
+  var lastU = n.lastIndexOf("_");
+  if (lastU < 1) return false;
+  var datePart = n.substring(lastU + 1);
+  if (!/^(\d{4}-\d{2}-\d{2})(-\d+)?$/.test(datePart)) return false;
+  var rest = n.substring(0, lastU);
+  var secondU = rest.lastIndexOf("_");
+  if (secondU < 1) return false;
+  var titlePart = rest.substring(0, secondU).trim();
+  var hostPart = rest.substring(secondU + 1).trim();
+  if (!titlePart || !hostPart) return false;
+  return parseDateFromName_(n) !== null;
+}
+
 function parseDateFromName_(sheetName) {
-  var m = sheetName.match(/^團購_(\d{4})-(\d{2})-(\d{2})/);
+  var lastU = sheetName.lastIndexOf("_");
+  if (lastU < 0) return null;
+  var datePart = sheetName.substring(lastU + 1);
+  var m = datePart.match(/^(\d{4})-(\d{2})-(\d{2})(?:-\d+)?$/);
   if (!m) return null;
   var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   return isNaN(d.getTime()) ? null : d;
@@ -165,7 +184,7 @@ function listGroupOrders_(statusFilter) {
   for (var i = 0; i < sheets.length; i++) {
     var s = sheets[i];
     var n = s.getName();
-    if (n.indexOf(SHEET_PREFIX) !== 0) continue;
+    if (!isGroupOrderSheetName_(n)) continue;
     var meta = readSheetMeta_(s);
     if (statusFilter === "active" && meta.status !== "active") continue;
     if (statusFilter === "closed" && meta.status !== "closed") continue;
@@ -190,7 +209,7 @@ function getGroupOrderDetail_(sheetName) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) return null;
-  if (sheetName.indexOf(SHEET_PREFIX) !== 0) return null;
+  if (!isGroupOrderSheetName_(sheetName)) return null;
 
   var meta = readSheetMeta_(sheet);
   var headers =
@@ -250,11 +269,13 @@ function getGroupOrderDetail_(sheetName) {
   };
 }
 
-function sanitizeSheetName_(name) {
-  return name
-    .replace(/[\\\/\?\*\[\]\:]/g, "_")
-    .substring(0, 60)
-    .trim();
+function sanitizeSheetPart_(s, maxLen) {
+  return String(s || "")
+    .replace(/[\\\/\?\*\[\]\:]/g, " ")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .substring(0, maxLen);
 }
 
 function handleCreateGroupOrder_(body) {
@@ -274,8 +295,9 @@ function handleCreateGroupOrder_(body) {
   var orderTypeLabel = orderTypeRaw === "drink" ? "飲料" : "食物";
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var safeTitle = sanitizeSheetName_(title);
-  var baseName = SHEET_PREFIX + date + "_" + safeTitle;
+  var safeTitle = sanitizeSheetPart_(title, 50);
+  var safeHost = sanitizeSheetPart_(host, 30);
+  var baseName = safeTitle + "_" + safeHost + "_" + date;
   var existing = ss.getSheets().map(function (s) {
     return s.getName();
   });
@@ -348,7 +370,7 @@ function ensureMessageHeader_(sheet, meta) {
 function getSheetIfActive_(body, requireActive) {
   var sheetName = String(body.sheetName || "").trim();
   if (!sheetName) return { error: "缺少 sheetName" };
-  if (sheetName.indexOf(SHEET_PREFIX) !== 0)
+  if (!isGroupOrderSheetName_(sheetName))
     return { error: "工作表名稱不合法" };
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(sheetName);

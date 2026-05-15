@@ -5,8 +5,10 @@
 #   將 Build and deployment → Source 設為「GitHub Actions」並儲存。
 #   若未啟用，deploy-pages 會出現 HttpError: Not Found (404)。
 #
-# 並在 Repo → Settings → Secrets and variables → Actions
-# 新增 Repository secret：VITE_APPS_SCRIPT_URL（你的 Apps Script /exec 網址）
+# 【Repository secrets】Repo → Settings → Secrets and variables → Actions → New repository secret
+#   必填：VITE_APPS_SCRIPT_URL（Google Apps Script /exec 網址）
+#   選填：VITE_OPENAI_API_KEY、VITE_OPENAI_FORTUNE_MODEL（占卜用，見 .env.example）
+#   若未設定 VITE_OPENAI_API_KEY，建置仍會成功，僅占卜功能在網站上無法呼叫 OpenAI。
 
 name: Deploy GitHub Pages
 
@@ -45,6 +47,8 @@ jobs:
           # 與 GitHub Pages 專案站路徑一致：https://<user>.github.io/<repo>/
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
           VITE_APPS_SCRIPT_URL: ${{ secrets.VITE_APPS_SCRIPT_URL }}
+          VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
+          VITE_OPENAI_FORTUNE_MODEL: ${{ secrets.VITE_OPENAI_FORTUNE_MODEL }}
         run: npm run build
 
       - name: Upload artifact

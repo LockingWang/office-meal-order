@@ -7,8 +7,9 @@ declare module "*.module.css" {
 
 interface ImportMetaEnv {
   readonly VITE_APPS_SCRIPT_URL?: string;
-  /** 選用：點餐占卜（由瀏覽器直連 OpenAI，僅建議內部／測試） */
   readonly VITE_OPENAI_API_KEY?: string;
+  /** 選用：占卜用 Chat Completions 模型（預設為具網搜的 gpt-4o-mini-search-preview） */
+  readonly VITE_OPENAI_FORTUNE_MODEL?: string;
 }
 
 interface ImportMeta {

@@ -149,16 +149,9 @@ export default function App() {
 
         {!configured && (
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>尚未連結試算表</h2>
+            <h2 className={styles.cardTitle}>暫時無法使用團購功能</h2>
             <p className={styles.hint}>
-              請在專案根目錄建立{" "}
-              <code className={styles.code}>.env.local</code>，並設定：
-            </p>
-            <pre className={styles.pre}>
-              {`VITE_APPS_SCRIPT_URL=https://script.google.com/macros/s/.../exec`}
-            </pre>
-            <p className={styles.hint}>
-              部署網址請依照 README 內的 Google Apps Script 步驟取得。
+              目前無法連線至團購服務。若您需要開團或跟團，請聯絡管理員或資訊人員協助。
             </p>
           </section>
         )}

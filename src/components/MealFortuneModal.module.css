@@ -20,11 +20,14 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: 0 24px 56px rgba(35, 28, 48, 0.35);
-  padding: 1.15rem 1.25rem 1.35rem;
-  max-height: min(92vh, 720px);
+  padding: 1.15rem 1.25rem 0.85rem;
+  max-height: min(calc(100dvh - 2rem), 720px);
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.65rem;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .head {
@@ -32,6 +35,128 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.panelScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-right: 0.15rem;
+  margin-right: -0.05rem;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(107, 91, 184, 0.55) rgba(120, 86, 168, 0.07);
+}
+
+.panelScroll::-webkit-scrollbar {
+  width: 7px;
+}
+
+.panelScroll::-webkit-scrollbar-track {
+  margin: 6px 0;
+  background: rgba(120, 86, 168, 0.06);
+  border-radius: 999px;
+  border: 1px solid rgba(120, 86, 168, 0.1);
+}
+
+.panelScroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(168, 138, 210, 0.95) 0%,
+    rgba(107, 91, 184, 0.88) 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.panelScroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(180, 152, 218, 1) 0%,
+    rgba(120, 100, 190, 0.95) 100%
+  );
+}
+
+/* 送出占卜後：全螢幕神秘遮罩 + 中央占卜師動畫 */
+.ritualLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.ritualVeil {
+  position: absolute;
+  inset: 0;
+  background: rgb(22 20 32 / 0.72);
+  animation: ritualBreathA 2.4s ease-in-out infinite alternate;
+}
+
+.ritualVeil2 {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 45%,
+    rgb(120 90 160 / 0.22) 0%,
+    transparent 55%
+  );
+  animation: ritualBreathB 3.1s ease-in-out infinite alternate-reverse;
+  pointer-events: none;
+}
+
+.ritualStage {
+  position: relative;
+  z-index: 2;
+  width: min(300px, 86vw);
+  height: min(240px, 42dvh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.ritualLottie {
+  width: 100%;
+  height: 100%;
+  max-width: 280px;
+  max-height: 220px;
+  display: block;
+  filter: drop-shadow(0 8px 28px rgb(0 0 0 / 0.35));
+}
+
+@keyframes ritualBreathA {
+  0% {
+    opacity: 0.38;
+  }
+  100% {
+    opacity: 0.88;
+  }
+}
+
+@keyframes ritualBreathB {
+  0% {
+    opacity: 0.25;
+  }
+  100% {
+    opacity: 0.75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ritualVeil,
+  .ritualVeil2 {
+    animation: none;
+    opacity: 0.65;
+  }
 }
 
 .title {
@@ -71,48 +196,35 @@
   cursor: not-allowed;
 }
 
-.mysticArea {
-  border-radius: 16px;
-  background: linear-gradient(
-    145deg,
-    rgba(120, 86, 168, 0.12) 0%,
-    rgba(74, 124, 168, 0.1) 100%
-  );
-  border: 1px solid rgba(120, 86, 168, 0.22);
-  min-height: 168px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.lottie {
-  width: 100%;
-  height: 168px;
-  display: block;
-}
-
-.idle {
-  text-align: center;
-  padding: 1rem 1.1rem;
-  color: var(--text-soft);
-  font-size: 0.88rem;
-  line-height: 1.5;
-}
-
-.idleIcon {
-  display: block;
-  font-size: 2rem;
-  margin-bottom: 0.35rem;
-  filter: drop-shadow(0 2px 6px rgba(120, 86, 168, 0.25));
-}
-
 .form {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
+}
+
+.rowBirthGender {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: flex-start;
+}
+
+.fieldBirth {
+  flex: 1 1 12.5rem;
+  min-width: 0;
+}
+
+.fieldGender {
+  flex: 1 1 8.5rem;
+  min-width: min(100%, 7.5rem);
+}
+
+@media (max-width: 380px) {
+  .fieldBirth,
+  .fieldGender {
+    flex: 1 1 100%;
+  }
 }
 
 .field {
@@ -153,9 +265,6 @@
 }
 
 .resultBox {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
   padding: 0.75rem 0.85rem;
   background: linear-gradient(180deg, #fdfaf8 0%, #f7f2fb 100%);
   border: 1px solid var(--border-soft);
@@ -164,6 +273,7 @@
   line-height: 1.55;
   color: var(--text);
   white-space: pre-wrap;
+  flex-shrink: 0;
 }
 
 .resultBox h2 {
@@ -182,10 +292,27 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+  flex-shrink: 0;
+  padding-top: 0.15rem;
+}
+
+.footerBar {
+  flex-shrink: 0;
+  margin: 0 -1.25rem -0.85rem;
+  padding: 0.65rem 1.25rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(120, 86, 168, 0.18);
+  background: linear-gradient(
+    180deg,
+    rgba(251, 249, 255, 0.65) 0%,
+    var(--surface) 38%
+  );
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .submitBtn {
-  padding: 0.55rem 1.1rem;
+  display: block;
+  width: 100%;
+  padding: 0.6rem 1.1rem;
   font-size: 0.92rem;
   font-weight: 800;
   color: #fff;
@@ -227,11 +354,5 @@
   font-size: 0.82rem;
   color: var(--error);
   line-height: 1.45;
-}
-
-.hint {
-  margin: 0;
-  font-size: 0.72rem;
-  color: var(--muted);
-  line-height: 1.45;
+  flex-shrink: 0;
 }
