@@ -43,7 +43,7 @@
   font-weight: 600;
   color: var(--text);
   cursor: pointer;
-  max-width: 12rem;
+  max-width: min(14rem, 52vw);
   text-overflow: ellipsis;
 }
 

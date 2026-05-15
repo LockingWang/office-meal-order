@@ -22,7 +22,7 @@ import { toUserFacingErrorMessage } from "./utils/userFacingError";
 export default function App() {
   const configured = isConfigured();
   const { userName, setUserName, ready: userReady } = useUserName();
-  const { theme, manualMonth, setManualMonth } = useMonthlyTheme();
+  const { theme, manualMonth, setManualMonth, isAuto } = useMonthlyTheme();
   const realMonth = new Date().getMonth() + 1;
 
   const [tab, setTab] = useState<GroupOrderStatus>("active");
@@ -94,19 +94,31 @@ export default function App() {
           <div className={styles.brand}>
             <p className={styles.badge}>Office Lunch Time</p>
             <h1 className={styles.title}>今天想吃什麼呀？</h1>
-            <span className={styles.themeChip} title="會依當月節氣自動切換主題色">
-              <span className={styles.themeEmoji} aria-hidden="true">
-                {theme.accentEmoji}
+            <div className={styles.themeRow}>
+              <span
+                className={styles.themeChip}
+                title={
+                  isAuto
+                    ? "依目前月份節氣自動套用主題色與背景；下方選單可改為手動預覽其他月份。"
+                    : "正在手動預覽所選月份風格；選單選「自動」即恢復跟隨當月節氣。"
+                }
+              >
+                <span className={styles.themeEmoji} aria-hidden="true">
+                  {theme.accentEmoji}
+                </span>
+                {theme.label} · {theme.seasonLabel}
+                {!isAuto && (
+                  <span className={styles.themeManualMark}>手動</span>
+                )}
               </span>
-              {theme.label} · {theme.seasonLabel}
-            </span>
+              <ThemePicker
+                manualMonth={manualMonth}
+                currentMonth={realMonth}
+                onChange={setManualMonth}
+              />
+            </div>
           </div>
           <div className={styles.headerRight}>
-            <ThemePicker
-              manualMonth={manualMonth}
-              currentMonth={realMonth}
-              onChange={setManualMonth}
-            />
             {userName && (
               <button
                 type="button"

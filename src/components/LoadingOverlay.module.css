@@ -44,7 +44,7 @@
 
 .caption {
   margin: 0;
-  margin-bottom: -3rem;
+  margin-bottom: -2rem;
   pointer-events: none;
   font-size: clamp(1.05rem, 3.2vw, 1.4rem);
   font-weight: 700;
@@ -61,11 +61,23 @@
     0 1px 0 rgba(255, 255, 255, 0.65) inset;
 }
 
-/* —— 送出：維持中央翻滾 —— */
+/* —— 送出：文案 + 黑貓翻滾（視覺縮為 0.75） —— */
+.submitColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  width: max-content;
+  max-width: min(92vw, 360px);
+  padding: 0.5rem 1rem;
+  box-sizing: border-box;
+}
+
 .stage {
   position: relative;
-  width: min(280px, 72vw);
-  height: min(220px, 40vh);
+  width: min(210px, 54vw);
+  height: min(165px, 30vh);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -74,31 +86,21 @@
 .lottie {
   width: 100%;
   height: 100%;
-  max-width: 260px;
-  max-height: 200px;
+  max-width: 195px;
+  max-height: 150px;
 }
 
 .roll {
   animation: rollRl 2.8s linear infinite;
+  transform-origin: center center;
 }
 
 @keyframes rollRl {
   0% {
-    transform: translateX(calc(30vw - 0px)) rotate(0deg);
+    transform: rotate(0deg);
   }
   100% {
-    transform: translateX(calc(-30vw + 0px)) rotate(-720deg);
-  }
-}
-
-@media (max-width: 520px) {
-  @keyframes rollRl {
-    0% {
-      transform: translateX(45vw) rotate(0deg);
-    }
-    100% {
-      transform: translateX(-45vw) rotate(-720deg);
-    }
+    transform: rotate(-720deg);
   }
 }
 

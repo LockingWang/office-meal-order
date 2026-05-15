@@ -22,7 +22,7 @@ export function LoadingOverlay({
 
   const aria =
     label ??
-    (variant === "data" ? "載入中…喵，請稍候" : "送出資料中，請稍候");
+    (variant === "data" ? "載入中…喵，請稍候" : "滾動式調整中，請稍候");
 
   return createPortal(
     <div
@@ -45,13 +45,16 @@ export function LoadingOverlay({
           </div>
         </div>
       ) : (
-        <div className={`${styles.stage} ${styles.roll}`}>
-          <DotLottieReact
-            src={LOTTIE_LOADING_SUBMIT}
-            autoplay
-            loop
-            className={styles.lottie}
-          />
+        <div className={styles.submitColumn}>
+          <p className={styles.caption}>滾動式調整中....</p>
+          <div className={`${styles.stage} ${styles.roll}`} aria-hidden="true">
+            <DotLottieReact
+              src={LOTTIE_LOADING_SUBMIT}
+              autoplay
+              loop
+              className={styles.lottie}
+            />
+          </div>
         </div>
       )}
     </div>,

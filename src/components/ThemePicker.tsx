@@ -15,11 +15,11 @@ export function ThemePicker({
   const value = manualMonth ?? "auto";
 
   return (
-    <label className={styles.wrap} title="切換主題色">
+    <label className={styles.wrap} title="手動切換節氣主題風格（會記住選擇）">
       <span className={styles.label} aria-hidden="true">
-        主題
+        切換
       </span>
-      <span className="sr-only">主題色</span>
+      <span className="sr-only">手動切換節氣主題風格</span>
       <select
         className={styles.select}
         value={value}
@@ -29,7 +29,7 @@ export function ThemePicker({
           else onChange(Number(v));
         }}
       >
-        <option value="auto">自動（{currentMonth} 月）</option>
+        <option value="auto">自動（跟隨 {currentMonth} 月節氣）</option>
         {MONTHS.map((t) => (
           <option key={t.month} value={t.month}>
             {t.accentEmoji} {t.label} · {t.seasonLabel}

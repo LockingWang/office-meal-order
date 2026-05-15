@@ -45,11 +45,18 @@
   color: var(--text);
 }
 
+.themeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
 .themeChip {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  margin-top: 0.15rem;
   padding: 0.2rem 0.65rem;
   font-size: 0.75rem;
   font-weight: 600;
@@ -59,6 +66,18 @@
   border-radius: 999px;
   letter-spacing: 0.02em;
   transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+}
+
+.themeManualMark {
+  margin-left: 0.1rem;
+  padding: 0.06rem 0.38rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--surface);
+  background: var(--accent-strong);
+  border-radius: 6px;
+  line-height: 1.2;
 }
 
 .themeEmoji {

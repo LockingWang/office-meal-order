@@ -17,7 +17,7 @@ import { toUserFacingErrorMessage } from "./utils/userFacingError";
 export default function App() {
     const configured = isConfigured();
     const { userName, setUserName, ready: userReady } = useUserName();
-    const { theme, manualMonth, setManualMonth } = useMonthlyTheme();
+    const { theme, manualMonth, setManualMonth, isAuto } = useMonthlyTheme();
     const realMonth = new Date().getMonth() + 1;
     const [tab, setTab] = useState("active");
     const [items, setItems] = useState({ active: [], closed: [] });
@@ -66,7 +66,9 @@ export default function App() {
     const listLoading = configured &&
         openSheet == null &&
         (loading.active || loading.closed);
-    return (_jsxs(_Fragment, { children: [_jsx(LoadingOverlay, { show: listLoading, variant: "data" }), _jsx(ThemeApplier, { theme: theme }), _jsx(MonthlyFloaters, { theme: theme }), _jsx(Mascots, {}), _jsxs("div", { className: styles.page, children: [_jsxs("header", { className: styles.appHeader, children: [_jsxs("div", { className: styles.brand, children: [_jsx("p", { className: styles.badge, children: "Office Lunch Time" }), _jsx("h1", { className: styles.title, children: "\u4ECA\u5929\u60F3\u5403\u4EC0\u9EBC\u5440\uFF1F" }), _jsxs("span", { className: styles.themeChip, title: "\u6703\u4F9D\u7576\u6708\u7BC0\u6C23\u81EA\u52D5\u5207\u63DB\u4E3B\u984C\u8272", children: [_jsx("span", { className: styles.themeEmoji, "aria-hidden": "true", children: theme.accentEmoji }), theme.label, " \u00B7 ", theme.seasonLabel] })] }), _jsxs("div", { className: styles.headerRight, children: [_jsx(ThemePicker, { manualMonth: manualMonth, currentMonth: realMonth, onChange: setManualMonth }), userName && (_jsxs("button", { type: "button", className: styles.userChip, onClick: () => setNameModalMode("edit"), title: "\u4FEE\u6539\u540D\u5B57", children: [_jsx("span", { className: styles.userLabel, children: "\u540D\u5B57" }), _jsx("span", { className: styles.userName, children: userName })] })), _jsx("button", { type: "button", className: styles.heroBtn, onClick: () => {
+    return (_jsxs(_Fragment, { children: [_jsx(LoadingOverlay, { show: listLoading, variant: "data" }), _jsx(ThemeApplier, { theme: theme }), _jsx(MonthlyFloaters, { theme: theme }), _jsx(Mascots, {}), _jsxs("div", { className: styles.page, children: [_jsxs("header", { className: styles.appHeader, children: [_jsxs("div", { className: styles.brand, children: [_jsx("p", { className: styles.badge, children: "Office Lunch Time" }), _jsx("h1", { className: styles.title, children: "\u4ECA\u5929\u60F3\u5403\u4EC0\u9EBC\u5440\uFF1F" }), _jsxs("div", { className: styles.themeRow, children: [_jsxs("span", { className: styles.themeChip, title: isAuto
+                                                    ? "依目前月份節氣自動套用主題色與背景；下方選單可改為手動預覽其他月份。"
+                                                    : "正在手動預覽所選月份風格；選單選「自動」即恢復跟隨當月節氣。", children: [_jsx("span", { className: styles.themeEmoji, "aria-hidden": "true", children: theme.accentEmoji }), theme.label, " \u00B7 ", theme.seasonLabel, !isAuto && (_jsx("span", { className: styles.themeManualMark, children: "\u624B\u52D5" }))] }), _jsx(ThemePicker, { manualMonth: manualMonth, currentMonth: realMonth, onChange: setManualMonth })] })] }), _jsxs("div", { className: styles.headerRight, children: [userName && (_jsxs("button", { type: "button", className: styles.userChip, onClick: () => setNameModalMode("edit"), title: "\u4FEE\u6539\u540D\u5B57", children: [_jsx("span", { className: styles.userLabel, children: "\u540D\u5B57" }), _jsx("span", { className: styles.userName, children: userName })] })), _jsx("button", { type: "button", className: styles.heroBtn, onClick: () => {
                                             if (!userName) {
                                                 setNameModalMode("first");
                                                 return;
