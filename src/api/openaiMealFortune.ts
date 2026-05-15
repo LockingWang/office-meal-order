@@ -96,6 +96,14 @@ function extractAssistantContent(
 /** 預設使用具網搜的 Chat Completions 模型；可於 .env 覆寫 VITE_OPENAI_FORTUNE_MODEL */
 const DEFAULT_FORTUNE_MODEL = "gpt-4o-mini-search-preview";
 
+/** 具網搜的 preview／search-api 等模型不接受 temperature，傳了會 400。 */
+function fortuneModelAcceptsTemperature(model: string): boolean {
+  const m = model.toLowerCase();
+  if (m.includes("search-preview")) return false;
+  if (m.includes("search-api")) return false;
+  return true;
+}
+
 export async function fetchMealFortune(
   ctx: MealFortuneContext
 ): Promise<string> {
@@ -108,23 +116,27 @@ export async function fetchMealFortune(
     import.meta.env.VITE_OPENAI_FORTUNE_MODEL?.trim() ||
     DEFAULT_FORTUNE_MODEL;
 
+  const payload: Record<string, unknown> = {
+    model,
+    web_search_options: {
+      search_context_size: "high",
+    },
+    messages: [
+      { role: "system", content: SYSTEM },
+      { role: "user", content: buildUserMessage(ctx) },
+    ],
+  };
+  if (fortuneModelAcceptsTemperature(model)) {
+    payload.temperature = 0.65;
+  }
+
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      temperature: 0.65,
-      web_search_options: {
-        search_context_size: "high",
-      },
-      messages: [
-        { role: "system", content: SYSTEM },
-        { role: "user", content: buildUserMessage(ctx) },
-      ],
-    }),
+    body: JSON.stringify(payload),
   });
 
   const raw = await res.text().catch(() => "");
