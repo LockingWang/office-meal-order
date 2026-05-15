@@ -215,6 +215,35 @@
   flex-wrap: wrap;
 }
 
+.orderHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.fortuneBtn {
+  padding: 0.5rem 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #9b7bc9 0%, #7a5eb2 100%);
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 5px 13px rgba(122, 94, 178, 0.32);
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.fortuneBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(122, 94, 178, 0.4);
+}
+
+.fortuneBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .ordersTitle {
   margin: 0;
   font-size: 1.1rem;

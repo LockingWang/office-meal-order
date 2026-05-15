@@ -10,6 +10,7 @@ import {
   type Order,
 } from "../api";
 import { OrderEditModal, type OrderDraft } from "./OrderEditModal";
+import { MealFortuneModal } from "./MealFortuneModal";
 import styles from "./GroupOrderDetailModal.module.css";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { toUserFacingErrorMessage } from "../utils/userFacingError";
@@ -37,6 +38,7 @@ export function GroupOrderDetailModal({
   } | null>(null);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [fortuneOpen, setFortuneOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!sheetName) return;
@@ -64,13 +66,19 @@ export function GroupOrderDetailModal({
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && !actionBusy && !editingOrder && !createOpen) {
+      if (
+        e.key === "Escape" &&
+        !actionBusy &&
+        !editingOrder &&
+        !createOpen &&
+        !fortuneOpen
+      ) {
         onClose();
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, actionBusy, editingOrder, createOpen, onClose]);
+  }, [open, actionBusy, editingOrder, createOpen, fortuneOpen, onClose]);
 
   const totalAmount = useMemo(() => {
     if (!detail) return 0;
@@ -198,7 +206,8 @@ export function GroupOrderDetailModal({
       role="dialog"
       aria-modal="true"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !actionBusy) onClose();
+        if (e.target === e.currentTarget && !actionBusy && !fortuneOpen)
+          onClose();
       }}
     >
       <LoadingOverlay
@@ -307,14 +316,26 @@ export function GroupOrderDetailModal({
                     </span>
                   </h3>
                   {!isClosed && (
-                    <button
-                      type="button"
-                      className={styles.addOrderBtn}
-                      onClick={() => setCreateOpen(true)}
-                      disabled={actionBusy}
-                    >
-                      + 新增訂單
-                    </button>
+                    <div className={styles.orderHeaderActions}>
+                      <button
+                        type="button"
+                        className={styles.fortuneBtn}
+                        onClick={() => setFortuneOpen(true)}
+                        disabled={
+                          actionBusy || createOpen || editingOrder != null
+                        }
+                      >
+                        點餐占卜
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.addOrderBtn}
+                        onClick={() => setCreateOpen(true)}
+                        disabled={actionBusy}
+                      >
+                        + 新增訂單
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -456,6 +477,15 @@ export function GroupOrderDetailModal({
           defaultName={userName}
           onClose={() => setEditingOrder(null)}
           onSubmit={handleUpdateSubmit}
+        />
+      )}
+      {meta && (
+        <MealFortuneModal
+          open={fortuneOpen}
+          onClose={() => setFortuneOpen(false)}
+          meta={meta}
+          userName={userName}
+          orders={orders}
         />
       )}
     </div>
