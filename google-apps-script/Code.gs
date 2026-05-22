@@ -112,6 +112,7 @@ function doPost(e) {
   if (action === "reorderGroupOrder") return handleReorderGroupOrder_(body);
   if (action === "updateGroupOrderImages") return handleUpdateGroupOrderImages_(body);
   if (action === "updateGroupOrderReferenceUrl") return handleUpdateGroupOrderReferenceUrl_(body);
+  if (action === "updateGroupOrderDeadline") return handleUpdateGroupOrderDeadline_(body);
   if (action === "logFortune") return handleLogFortune_(body);
   return jsonResponse_({ ok: false, error: "未知的 action：" + action });
 }
@@ -173,6 +174,83 @@ function formatDateValue_(v) {
     );
   }
   return String(v || "").trim();
+}
+
+/** 截止時間字串轉毫秒；空白或無法解析則 null（表示未設截止） */
+function parseDeadlineMs_(deadlineStr) {
+  var t = String(deadlineStr || "").trim();
+  if (!t) return null;
+  var normalized = t.indexOf("T") >= 0 ? t : t.replace(" ", "T");
+  var ms = Date.parse(normalized);
+  return isNaN(ms) ? null : ms;
+}
+
+function isDeadlinePassed_(meta) {
+  var ms = parseDeadlineMs_(meta.deadline);
+  if (ms === null) return false;
+  return Date.now() > ms;
+}
+
+function assertOrderWindowOpen_(meta) {
+  if (meta.status !== STATUS_ACTIVE) {
+    return { error: "團購單已結案，無法新增或修改訂單" };
+  }
+  if (isDeadlinePassed_(meta)) {
+    return { error: "已超過截止時間，無法新增或修改訂單" };
+  }
+  return null;
+}
+
+function getRoundColumnIndex_(meta) {
+  var headers =
+    meta.orderType === "drink" ? ORDER_HEADERS_DRINK : ORDER_HEADERS_FOOD;
+  return headers.length;
+}
+
+function ensureRoundColumn_(sheet, meta) {
+  ensureMessageHeader_(sheet, meta);
+  var col = getRoundColumnIndex_(meta);
+  var label = String(
+    sheet.getRange(ORDER_HEADER_ROW, col).getValue() || ""
+  ).trim();
+  if (label !== "輪次") {
+    sheet
+      .getRange(ORDER_HEADER_ROW, col)
+      .setValue("輪次")
+      .setFontWeight("bold")
+      .setBackground("#fde2c2");
+    sheet.setColumnWidth(col, 60);
+  }
+}
+
+function stampAllOrdersWithRound_(sheet, meta, roundNum) {
+  ensureRoundColumn_(sheet, meta);
+  var col = getRoundColumnIndex_(meta);
+  var lastRow = sheet.getLastRow();
+  if (lastRow < ORDER_FIRST_ROW) return;
+  var n = lastRow - ORDER_FIRST_ROW + 1;
+  var values = [];
+  for (var i = 0; i < n; i++) values.push([roundNum]);
+  sheet.getRange(ORDER_FIRST_ROW, col, n, 1).setValues(values);
+}
+
+function getOrderRoundFromRow_(sheet, meta, rowNum) {
+  ensureRoundColumn_(sheet, meta);
+  var col = getRoundColumnIndex_(meta);
+  var raw = sheet.getRange(rowNum, col).getValue();
+  var n = Number(raw);
+  if (!isNaN(n) && isFinite(n) && n >= 1) return Math.floor(n);
+  return 0;
+}
+
+function assertOrderInCurrentRound_(sheet, meta, rowNum) {
+  var current = getSheetRound_(sheet);
+  var orderRound = getOrderRoundFromRow_(sheet, meta, rowNum);
+  var effective = orderRound > 0 ? orderRound : 1;
+  if (effective !== current) {
+    return { error: "此訂單屬於上一輪，請使用「再點一次」新增至本輪" };
+  }
+  return null;
 }
 
 function readSheetMeta_(sheet) {
@@ -309,19 +387,16 @@ function getGroupOrderDetail_(sheetName) {
       allOrdersWithRound.push({ order: order, round: orderRound });
     }
 
-    // 只有當工作表實際有輪次 ≥ 2 的訂單時，才進行輪次篩選
-    // 否則（舊工作表或第一輪），全部視為當前輪次
-    var hasReorderData = false;
-    for (var i = 0; i < allOrdersWithRound.length; i++) {
-      if (allOrdersWithRound[i].round >= 2) { hasReorderData = true; break; }
-    }
+    // 第 2 輪起依輪次欄位分離本輪／上一輪；第 1 輪或舊工作表則全部視為本輪
+    var hasReorderData = currentRound >= 2;
 
     for (var i = 0; i < allOrdersWithRound.length; i++) {
       var item = allOrdersWithRound[i];
       if (!hasReorderData) {
         currentOrders.push(item.order);
       } else {
-        var effectiveRound = item.round > 0 ? item.round : currentRound;
+        // 無輪次標記的舊資料視為第 1 輪，避免重新訂購後整批被當成本輪
+        var effectiveRound = item.round > 0 ? item.round : 1;
         if (effectiveRound === currentRound) {
           currentOrders.push(item.order);
         } else if (effectiveRound === currentRound - 1) {
@@ -535,6 +610,9 @@ function handleSubmitOrder_(body) {
   var sheet = got.sheet;
   var meta = got.meta;
 
+  var windowErr = assertOrderWindowOpen_(meta);
+  if (windowErr) return jsonResponse_({ ok: false, error: windowErr.error });
+
   var v = validateOrder_(body, meta);
   if (v.error) return jsonResponse_({ ok: false, error: v.error });
 
@@ -557,10 +635,16 @@ function handleUpdateOrder_(body) {
   var sheet = got.sheet;
   var meta = got.meta;
 
+  var windowErr = assertOrderWindowOpen_(meta);
+  if (windowErr) return jsonResponse_({ ok: false, error: windowErr.error });
+
   var orderId = String(body.orderId || "").trim();
   if (!orderId) return jsonResponse_({ ok: false, error: "缺少 orderId" });
   var rowNum = findOrderRow_(sheet, orderId);
   if (rowNum < 0) return jsonResponse_({ ok: false, error: "找不到該筆訂單" });
+
+  var roundErr = assertOrderInCurrentRound_(sheet, meta, rowNum);
+  if (roundErr) return jsonResponse_({ ok: false, error: roundErr.error });
 
   var v = validateOrder_(body, meta);
   if (v.error) return jsonResponse_({ ok: false, error: v.error });
@@ -590,11 +674,18 @@ function handleDeleteOrder_(body) {
   var got = getSheetIfActive_(body, true);
   if (got.error) return jsonResponse_({ ok: false, error: got.error });
   var sheet = got.sheet;
+  var meta = got.meta;
+
+  var windowErr = assertOrderWindowOpen_(meta);
+  if (windowErr) return jsonResponse_({ ok: false, error: windowErr.error });
 
   var orderId = String(body.orderId || "").trim();
   if (!orderId) return jsonResponse_({ ok: false, error: "缺少 orderId" });
   var rowNum = findOrderRow_(sheet, orderId);
   if (rowNum < 0) return jsonResponse_({ ok: false, error: "找不到該筆訂單" });
+
+  var roundErr = assertOrderInCurrentRound_(sheet, meta, rowNum);
+  if (roundErr) return jsonResponse_({ ok: false, error: roundErr.error });
 
   sheet.deleteRow(rowNum);
 
@@ -633,7 +724,9 @@ function handleReorderGroupOrder_(body) {
   var meta = readSheetMeta_(sheet);
   if (meta.status !== "closed") return jsonResponse_({ ok: false, error: "只能對已結案的團購單重新訂購" });
 
-  var newRound = getSheetRound_(sheet) + 1;
+  var oldRound = getSheetRound_(sheet);
+  stampAllOrdersWithRound_(sheet, meta, oldRound);
+  var newRound = oldRound + 1;
   sheet.getRange("B8").setValue(newRound);
   sheet.getRange("B5").setValue(STATUS_ACTIVE);
   if (deadline) sheet.getRange("B2").setValue(deadline);
@@ -663,6 +756,29 @@ function handleUpdateGroupOrderReferenceUrl_(body) {
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) return jsonResponse_({ ok: false, error: "找不到工作表" });
   sheet.getRange("C3").setValue(String(body.referenceUrl || "").trim());
+  return jsonResponse_({ ok: true });
+}
+
+function handleUpdateGroupOrderDeadline_(body) {
+  var sheetName = String(body.sheetName || "").trim();
+  if (!sheetName || !isGroupOrderSheetName_(sheetName))
+    return jsonResponse_({ ok: false, error: "工作表名稱不合法" });
+  var requester = String(body.requesterName || "").trim();
+  if (!requester) return jsonResponse_({ ok: false, error: "缺少操作者姓名" });
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return jsonResponse_({ ok: false, error: "找不到工作表" });
+
+  var meta = readSheetMeta_(sheet);
+  if (meta.status !== STATUS_ACTIVE)
+    return jsonResponse_({ ok: false, error: "僅進行中的團購可修改截止時間" });
+  var host = String(meta.host || "").trim();
+  if (!host || host !== requester)
+    return jsonResponse_({ ok: false, error: "僅主揪可修改截止時間" });
+
+  var deadline = String(body.deadline || "").trim();
+  sheet.getRange("B2").setValue(deadline);
   return jsonResponse_({ ok: true });
 }
 

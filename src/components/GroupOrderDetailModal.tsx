@@ -6,6 +6,7 @@ import {
   fetchGroupOrderDetail,
   reorderGroupOrder,
   submitOrder,
+  updateGroupOrderDeadline,
   updateGroupOrderImages,
   updateGroupOrderReferenceUrl,
   updateOrder,
@@ -17,6 +18,11 @@ import { MealFortuneModal } from "./MealFortuneModal";
 import styles from "./GroupOrderDetailModal.module.css";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { toUserFacingErrorMessage } from "../utils/userFacingError";
+import {
+  datetimeLocalToDeadlineString,
+  deadlineToDatetimeLocalValue,
+  isOrderDeadlinePassed,
+} from "../utils/deadline";
 
 export function GroupOrderDetailModal({
   open,
@@ -50,6 +56,8 @@ export function GroupOrderDetailModal({
   const [editingRefUrl, setEditingRefUrl] = useState(false);
   const [refUrlInput, setRefUrlInput] = useState("");
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const [editingDeadline, setEditingDeadline] = useState(false);
+  const [deadlineInput, setDeadlineInput] = useState("");
 
   const load = useCallback(async () => {
     if (!sheetName) return;
@@ -123,9 +131,24 @@ export function GroupOrderDetailModal({
   const orders = detail?.orders ?? [];
   const isDrink = meta?.orderType === "drink";
   const isClosed = meta?.status === "closed";
+  const isHost =
+    !!meta?.host?.trim() &&
+    !!userName.trim() &&
+    meta.host.trim() === userName.trim();
+  const pastDeadline = meta ? isOrderDeadlinePassed(meta.deadline) : false;
+  const canOrder = !isClosed && !pastDeadline;
 
   async function handleCreateSubmit(draft: OrderDraft) {
     if (!meta) return;
+    if (!canOrder) {
+      setActionMsg({
+        type: "err",
+        text: pastDeadline
+          ? "已超過截止時間，無法新增訂單。"
+          : "團購已結案，無法新增訂單。",
+      });
+      return;
+    }
     await submitOrder({
       sheetName: meta.sheetName,
       name: draft.name,
@@ -146,6 +169,15 @@ export function GroupOrderDetailModal({
 
   async function handleUpdateSubmit(draft: OrderDraft) {
     if (!meta || !editingOrder) return;
+    if (!canOrder) {
+      setActionMsg({
+        type: "err",
+        text: pastDeadline
+          ? "已超過截止時間，無法修改訂單。"
+          : "團購已結案，無法修改訂單。",
+      });
+      return;
+    }
     await updateOrder({
       sheetName: meta.sheetName,
       orderId: editingOrder.id,
@@ -167,6 +199,15 @@ export function GroupOrderDetailModal({
 
   async function handleDelete(order: Order) {
     if (!meta) return;
+    if (!canOrder) {
+      setActionMsg({
+        type: "err",
+        text: pastDeadline
+          ? "已超過截止時間，無法刪除訂單。"
+          : "團購已結案，無法刪除訂單。",
+      });
+      return;
+    }
     const confirmText =
       order.name === userName
         ? `確定要刪除自己的「${order.itemName}」嗎？`
@@ -272,8 +313,41 @@ export function GroupOrderDetailModal({
   }
 
   function handleRepeat(order: Order) {
+    if (!canOrder) {
+      setActionMsg({
+        type: "err",
+        text: pastDeadline
+          ? "已超過截止時間，無法再點一次。"
+          : "團購已結案，無法再點一次。",
+      });
+      return;
+    }
     setPrefillOrder({ ...order, messageToHost: "" });
     setCreateOpen(true);
+  }
+
+  async function handleSaveDeadline() {
+    if (!meta) return;
+    setActionBusy(true);
+    setActionMsg(null);
+    try {
+      await updateGroupOrderDeadline(
+        meta.sheetName,
+        datetimeLocalToDeadlineString(deadlineInput),
+        userName
+      );
+      setEditingDeadline(false);
+      setActionMsg({ type: "ok", text: "已更新截止時間。" });
+      await load();
+      onChanged();
+    } catch (err) {
+      setActionMsg({
+        type: "err",
+        text: toUserFacingErrorMessage(err, "更新截止時間失敗，請稍後再試。"),
+      });
+    } finally {
+      setActionBusy(false);
+    }
   }
 
   return (
@@ -351,12 +425,67 @@ export function GroupOrderDetailModal({
                   <span className={styles.metaLabel}>主揪</span>
                   <span>{meta.host || "—"}</span>
                 </p>
-                {meta.deadline && (
-                  <p className={styles.metaLine}>
-                    <span className={styles.metaLabel}>截止</span>
-                    <span>{meta.deadline}</span>
-                  </p>
-                )}
+                <div className={styles.deadlineRow}>
+                  {editingDeadline ? (
+                    <div className={styles.deadlineEdit}>
+                      <label className={styles.deadlineEditLabel} htmlFor="deadline-edit">
+                        截止時間
+                      </label>
+                      <input
+                        id="deadline-edit"
+                        type="datetime-local"
+                        className={styles.deadlineEditInput}
+                        value={deadlineInput}
+                        onChange={(e) => setDeadlineInput(e.target.value)}
+                        disabled={actionBusy}
+                        autoFocus
+                      />
+                      <div className={styles.deadlineEditActions}>
+                        <button
+                          type="button"
+                          className={styles.smallBtn}
+                          onClick={() => setEditingDeadline(false)}
+                          disabled={actionBusy}
+                        >
+                          取消
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.smallBtn}
+                          onClick={() => void handleSaveDeadline()}
+                          disabled={actionBusy}
+                        >
+                          儲存
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className={styles.metaLine}>
+                      <span className={styles.metaLabel}>截止</span>
+                      <span className={pastDeadline ? styles.deadlinePassed : undefined}>
+                        {meta.deadline || "未設定"}
+                      </span>
+                      {isHost && !isClosed && (
+                        <button
+                          type="button"
+                          className={styles.imageEditToggle}
+                          onClick={() => {
+                            setDeadlineInput(deadlineToDatetimeLocalValue(meta.deadline));
+                            setEditingDeadline(true);
+                          }}
+                          disabled={actionBusy}
+                        >
+                          修改截止時間
+                        </button>
+                      )}
+                    </p>
+                  )}
+                  {pastDeadline && !isClosed && (
+                    <p className={styles.deadlineNotice} role="status">
+                      已超過截止時間，無法新增或修改訂單。
+                    </p>
+                  )}
+                </div>
                 {isClosed && meta.closedAt && (
                   <p className={styles.metaLine}>
                     <span className={styles.metaLabel}>結案</span>
@@ -494,6 +623,9 @@ export function GroupOrderDetailModal({
                       </span>
                     </h3>
                   </div>
+                  <p className={styles.prevOrdersHint}>
+                    以下為上一輪訂單（僅供參考）。若要加入本輪，請點該品項的「再點一次」。
+                  </p>
                   <ul className={styles.orderList}>
                     {detail.previousOrders.map((o) => {
                       const isMine = o.name === userName && !!userName;
@@ -504,7 +636,7 @@ export function GroupOrderDetailModal({
                       return (
                         <li
                           key={o.id}
-                          className={`${styles.orderItem} ${
+                          className={`${styles.orderItem} ${styles.orderItemPrev} ${
                             isMine ? styles.orderItemMine : ""
                           }`}
                         >
@@ -547,7 +679,7 @@ export function GroupOrderDetailModal({
                           {o.note && (
                             <p className={styles.orderNote}>{o.note}</p>
                           )}
-                          {!isClosed && (
+                          {canOrder && (
                             <div className={styles.orderActions}>
                               <button
                                 type="button"
@@ -574,7 +706,7 @@ export function GroupOrderDetailModal({
                       {orders.length} 筆
                     </span>
                   </h3>
-                  {!isClosed && (
+                  {canOrder && (
                     <div className={styles.orderHeaderActions}>
                       <button
                         type="button"
@@ -679,7 +811,7 @@ export function GroupOrderDetailModal({
                               <span>{o.messageToHost}</span>
                             </p>
                           )}
-                          {!isClosed && (
+                          {canOrder && (
                             <div className={styles.orderActions}>
                               <button
                                 type="button"
@@ -806,7 +938,7 @@ export function GroupOrderDetailModal({
           <div className={styles.reorderDialog}>
             <h3 className={styles.reorderDialogTitle}>重新訂購</h3>
             <p className={styles.reorderDialogDesc}>
-              開啟新一輪訂購。上一輪訂單將保留作為參考，不會被刪除。
+              開啟新一輪訂購。上一輪訂單會以反灰方式顯示，需點「再點一次」才會加入本輪，不會自動帶入。
             </p>
             <div className={styles.reorderDialogField}>
               <label className={styles.reorderDialogLabel} htmlFor="reorder-deadline">

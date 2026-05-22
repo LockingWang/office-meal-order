@@ -164,6 +164,14 @@ export async function reopenGroupOrder(sheetName) {
 export async function reorderGroupOrder(sheetName, deadline, host) {
     await postAction({ action: "reorderGroupOrder", sheetName, deadline, host }, "重新訂購失敗，請稍後再試。");
 }
+export async function updateGroupOrderDeadline(sheetName, deadline, requesterName) {
+    await postAction({
+        action: "updateGroupOrderDeadline",
+        sheetName,
+        deadline,
+        requesterName,
+    }, "更新截止時間失敗，請稍後再試。");
+}
 export async function updateGroupOrderImages(sheetName, imageUrls) {
     await postAction({ action: "updateGroupOrderImages", sheetName, imageUrl: imageUrls.join("\n") }, "更新圖片失敗，請稍後再試。");
 }

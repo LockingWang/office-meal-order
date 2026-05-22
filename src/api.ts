@@ -285,6 +285,22 @@ export async function reorderGroupOrder(
   );
 }
 
+export async function updateGroupOrderDeadline(
+  sheetName: string,
+  deadline: string,
+  requesterName: string
+): Promise<void> {
+  await postAction(
+    {
+      action: "updateGroupOrderDeadline",
+      sheetName,
+      deadline,
+      requesterName,
+    },
+    "更新截止時間失敗，請稍後再試。"
+  );
+}
+
 export async function updateGroupOrderImages(
   sheetName: string,
   imageUrls: string[]

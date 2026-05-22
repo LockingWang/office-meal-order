@@ -675,9 +675,73 @@
   color: var(--secondary-strong);
 }
 
+.deadlineRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.deadlinePassed {
+  color: #c45a3a;
+  font-weight: 600;
+}
+
+.deadlineNotice {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #c45a3a;
+  font-weight: 600;
+}
+
+.deadlineEdit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.deadlineEditLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.deadlineEditInput {
+  width: 100%;
+  max-width: 280px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+.deadlineEditActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .prevOrdersCard {
-  opacity: 0.9;
+  opacity: 0.92;
   border-color: var(--border-soft);
+  background: var(--bg-soft);
+}
+
+.prevOrdersHint {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+  line-height: 1.45;
+}
+
+.orderItemPrev {
+  opacity: 0.55;
+  filter: grayscale(0.35);
+  background: var(--bg);
+}
+
+.orderItemPrev .orderItemName,
+.orderItemPrev .orderName,
+.orderItemPrev .orderSubtotal {
+  color: var(--text-soft);
 }
 
 .prevOrdersTitle {
