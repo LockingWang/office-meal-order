@@ -192,7 +192,7 @@ function isDeadlinePassed_(meta) {
 }
 
 function assertOrderWindowOpen_(meta) {
-  if (meta.status !== STATUS_ACTIVE) {
+  if (meta.status !== "active") {
     return { error: "團購單已結案，無法新增或修改訂單" };
   }
   if (isDeadlinePassed_(meta)) {
@@ -771,7 +771,7 @@ function handleUpdateGroupOrderDeadline_(body) {
   if (!sheet) return jsonResponse_({ ok: false, error: "找不到工作表" });
 
   var meta = readSheetMeta_(sheet);
-  if (meta.status !== STATUS_ACTIVE)
+  if (meta.status !== "active")
     return jsonResponse_({ ok: false, error: "僅進行中的團購可修改截止時間" });
   var host = String(meta.host || "").trim();
   if (!host || host !== requester)
