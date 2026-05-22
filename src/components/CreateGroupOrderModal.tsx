@@ -31,7 +31,7 @@ export function CreateGroupOrderModal({
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(todayString());
   const [deadline, setDeadline] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageUrlsText, setImageUrlsText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +41,7 @@ export function CreateGroupOrderModal({
       setTitle("");
       setDate(todayString());
       setDeadline("");
-      setImageUrl("");
+      setImageUrlsText("");
       setError(null);
       setSubmitting(false);
     }
@@ -63,7 +63,7 @@ export function CreateGroupOrderModal({
     setError(null);
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      setError("請填寫團購單標題。");
+      setError("請填寫餐廳名稱。");
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -74,11 +74,15 @@ export function CreateGroupOrderModal({
       setError("尚未設定主揪姓名，請先回主畫面輸入名字。");
       return;
     }
+    const imageUrls = imageUrlsText
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const payload: CreateGroupOrderPayload = {
       title: trimmedTitle,
       date,
       deadline: deadline.trim(),
-      imageUrl: imageUrl.trim(),
+      imageUrls,
       orderType,
       host: host.trim(),
     };
@@ -154,12 +158,12 @@ export function CreateGroupOrderModal({
           </div>
 
           <label className={styles.field}>
-            <span>標題 *</span>
+            <span>餐廳名稱 *</span>
             <input
               className={styles.input}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="例如：鬍鬚張午餐"
+              placeholder="例如：娜娜福、鬍鬚張"
               required
             />
           </label>
@@ -189,15 +193,15 @@ export function CreateGroupOrderModal({
 
           <label className={styles.field}>
             <span>菜單圖片連結（選填）</span>
-            <input
-              type="url"
+            <textarea
               className={styles.input}
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://..."
+              value={imageUrlsText}
+              onChange={(e) => setImageUrlsText(e.target.value)}
+              placeholder={"https://example.com/menu1.jpg\nhttps://example.com/menu2.jpg"}
+              rows={3}
             />
             <small className={styles.fieldHint}>
-              建議貼上店家菜單／海報的圖片網址，同事看圖下單。
+              每行填一個網址，可附多張菜單圖片；之後也可在訂單詳情頁編輯。
             </small>
           </label>
 

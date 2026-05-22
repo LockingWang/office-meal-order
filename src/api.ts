@@ -7,7 +7,7 @@ export type GroupOrderMeta = {
   sheetName: string;
   name: string;
   deadline: string;
-  imageUrl: string;
+  imageUrls: string[];
   orderType: OrderType;
   status: GroupOrderStatus;
   host: string;
@@ -38,7 +38,7 @@ export type CreateGroupOrderPayload = {
   title: string;
   date: string;
   deadline: string;
-  imageUrl: string;
+  imageUrls: string[];
   orderType: OrderType;
   host: string;
 };
@@ -105,11 +105,15 @@ function normalizeMeta(raw: unknown): GroupOrderMeta | null {
     String(o.orderType ?? "").toLowerCase() === "drink" ? "drink" : "food";
   const status: GroupOrderStatus =
     String(o.status ?? "").toLowerCase() === "closed" ? "closed" : "active";
+  const imageUrls = String(o.imageUrl ?? "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
   return {
     sheetName: String(o.sheetName),
     name: String(o.name),
     deadline: String(o.deadline ?? ""),
-    imageUrl: String(o.imageUrl ?? ""),
+    imageUrls,
     orderType,
     status,
     host: String(o.host ?? ""),
@@ -211,8 +215,9 @@ async function postAction(
 export async function createGroupOrder(
   payload: CreateGroupOrderPayload
 ): Promise<{ sheetName: string }> {
+  const { imageUrls, ...rest } = payload;
   const json = await postAction(
-    { action: "createGroupOrder", ...payload },
+    { action: "createGroupOrder", ...rest, imageUrl: imageUrls.join("\n") },
     "建立團購單失敗，請稍後再試。"
   );
   return { sheetName: String(json.sheetName || "") };
@@ -258,11 +263,22 @@ export async function reopenGroupOrder(sheetName: string): Promise<void> {
 
 export async function reorderGroupOrder(
   sheetName: string,
-  deadline: string
+  deadline: string,
+  host: string
 ): Promise<void> {
   await postAction(
-    { action: "reorderGroupOrder", sheetName, deadline },
+    { action: "reorderGroupOrder", sheetName, deadline, host },
     "重新訂購失敗，請稍後再試。"
+  );
+}
+
+export async function updateGroupOrderImages(
+  sheetName: string,
+  imageUrls: string[]
+): Promise<void> {
+  await postAction(
+    { action: "updateGroupOrderImages", sheetName, imageUrl: imageUrls.join("\n") },
+    "更新圖片失敗，請稍後再試。"
   );
 }
 

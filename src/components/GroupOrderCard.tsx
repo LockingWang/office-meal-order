@@ -18,10 +18,10 @@ export function GroupOrderCard({
       data-status={meta.status}
     >
       <div className={styles.thumbWrap}>
-        {meta.imageUrl ? (
+        {meta.imageUrls[0] ? (
           <img
             className={styles.thumb}
-            src={meta.imageUrl}
+            src={meta.imageUrls[0]}
             alt={meta.name}
             loading="lazy"
           />

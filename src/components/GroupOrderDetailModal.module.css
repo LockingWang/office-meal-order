@@ -188,6 +188,57 @@
   border-radius: 999px;
 }
 
+.imageSectionHeader {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+.imageEditToggle {
+  padding: 0.25rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.imageEditToggle:hover:not(:disabled) {
+  background: var(--border-soft);
+}
+
+.imageEditToggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.imageEditBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.imageEditTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.imageEditActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
 .imageWrap {
   display: block;
   margin-top: 0.85rem;

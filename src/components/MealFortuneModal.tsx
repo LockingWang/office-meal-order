@@ -148,7 +148,7 @@ export function MealFortuneModal({
     const ctx: MealFortuneContext = {
       storeName: meta.name,
       orderTypeLabel,
-      menuImageUrl: meta.imageUrl || null,
+      menuImageUrl: meta.imageUrls[0] || null,
       deadline: meta.deadline || null,
       host: meta.host || null,
       userName: userName || "匿名",

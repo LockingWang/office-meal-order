@@ -5,6 +5,7 @@ import {
   fetchGroupOrderDetail,
   reorderGroupOrder,
   submitOrder,
+  updateGroupOrderImages,
   updateOrder,
   type GroupOrderDetail,
   type Order,
@@ -42,6 +43,8 @@ export function GroupOrderDetailModal({
   const [fortuneOpen, setFortuneOpen] = useState(false);
   const [reorderOpen, setReorderOpen] = useState(false);
   const [reorderDeadline, setReorderDeadline] = useState("");
+  const [editingImages, setEditingImages] = useState(false);
+  const [imageUrlsInput, setImageUrlsInput] = useState("");
 
   const load = useCallback(async () => {
     if (!sheetName) return;
@@ -189,7 +192,7 @@ export function GroupOrderDetailModal({
     setActionBusy(true);
     setActionMsg(null);
     try {
-      await reorderGroupOrder(meta.sheetName, deadline);
+      await reorderGroupOrder(meta.sheetName, deadline, userName);
       setReorderOpen(false);
       setReorderDeadline("");
       setActionMsg({ type: "ok", text: "已開始新一輪訂購。" });
@@ -199,6 +202,27 @@ export function GroupOrderDetailModal({
       setActionMsg({
         type: "err",
         text: toUserFacingErrorMessage(err, "重新訂購失敗，請稍後再試。"),
+      });
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function handleSaveImages() {
+    if (!meta) return;
+    setActionBusy(true);
+    setActionMsg(null);
+    try {
+      const urls = imageUrlsInput.split("\n").map((s) => s.trim()).filter(Boolean);
+      await updateGroupOrderImages(meta.sheetName, urls);
+      setEditingImages(false);
+      setActionMsg({ type: "ok", text: "已更新圖片。" });
+      await load();
+      onChanged();
+    } catch (err) {
+      setActionMsg({
+        type: "err",
+        text: toUserFacingErrorMessage(err, "更新圖片失敗，請稍後再試。"),
       });
     } finally {
       setActionBusy(false);
@@ -298,20 +322,66 @@ export function GroupOrderDetailModal({
                   </p>
                 )}
 
-                {meta.imageUrl ? (
-                  <a
-                    href={meta.imageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.imageWrap}
+                <div className={styles.imageSectionHeader}>
+                  <button
+                    type="button"
+                    className={styles.imageEditToggle}
+                    onClick={() => {
+                      setImageUrlsInput(meta.imageUrls.join("\n"));
+                      setEditingImages(true);
+                    }}
+                    disabled={actionBusy}
                   >
-                    <img
-                      className={styles.menuImage}
-                      src={meta.imageUrl}
-                      alt={`${meta.name} 菜單`}
-                      loading="lazy"
+                    編輯圖片
+                  </button>
+                </div>
+
+                {editingImages ? (
+                  <div className={styles.imageEditBox}>
+                    <textarea
+                      className={styles.imageEditTextarea}
+                      value={imageUrlsInput}
+                      onChange={(e) => setImageUrlsInput(e.target.value)}
+                      rows={4}
+                      placeholder={"每行填一個圖片網址\nhttps://example.com/menu1.jpg"}
+                      disabled={actionBusy}
                     />
-                  </a>
+                    <div className={styles.imageEditActions}>
+                      <button
+                        type="button"
+                        className={styles.smallBtn}
+                        onClick={() => setEditingImages(false)}
+                        disabled={actionBusy}
+                      >
+                        取消
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.smallBtn}
+                        onClick={() => void handleSaveImages()}
+                        disabled={actionBusy}
+                      >
+                        儲存
+                      </button>
+                    </div>
+                  </div>
+                ) : meta.imageUrls.length > 0 ? (
+                  meta.imageUrls.map((url, idx) => (
+                    <a
+                      key={idx}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.imageWrap}
+                    >
+                      <img
+                        className={styles.menuImage}
+                        src={url}
+                        alt={`${meta.name} 菜單${meta.imageUrls.length > 1 ? ` ${idx + 1}` : ""}`}
+                        loading="lazy"
+                      />
+                    </a>
+                  ))
                 ) : (
                   <p className={styles.mutedSmall}>沒有菜單圖片。</p>
                 )}

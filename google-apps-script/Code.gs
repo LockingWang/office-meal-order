@@ -61,7 +61,26 @@ function doGet(e) {
   }
   if (action === "detail") {
     var sheetName = String(params.sheetName || "");
-    return jsonResponse_(getGroupOrderDetail_(sheetName));
+    try {
+      return jsonResponse_(getGroupOrderDetail_(sheetName));
+    } catch (err) {
+      return jsonResponse_({ ok: false, error: String(err), sheetName: sheetName });
+    }
+  }
+  if (action === "debug") {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheets = ss.getSheets();
+    return jsonResponse_(sheets.map(function(s) {
+      var name = s.getName();
+      return {
+        name: name,
+        isGroupOrder: isGroupOrderSheetName_(name),
+        lastRow: s.getLastRow(),
+        maxCols: s.getMaxColumns(),
+        a8: String(s.getRange("A8").getValue() || ""),
+        b8: String(s.getRange("B8").getValue() || "")
+      };
+    }));
   }
   return jsonResponse_({
     ok: true,
@@ -91,6 +110,7 @@ function doPost(e) {
   if (action === "closeGroupOrder") return handleCloseGroupOrder_(body);
   if (action === "reopenGroupOrder") return handleReopenGroupOrder_(body);
   if (action === "reorderGroupOrder") return handleReorderGroupOrder_(body);
+  if (action === "updateGroupOrderImages") return handleUpdateGroupOrderImages_(body);
   if (action === "logFortune") return handleLogFortune_(body);
   return jsonResponse_({ ok: false, error: "未知的 action：" + action });
 }
@@ -121,19 +141,15 @@ function getSheetRound_(sheet) {
   return (!isNaN(n) && isFinite(n) && n >= 1) ? Math.floor(n) : 1;
 }
 
-/** 團購工作表：團購單名稱_主揪名稱_YYYY-MM-DD，同名同日可為 …-2、…-3（由最後一個 _ 起為日期段） */
+/** 團購工作表：餐廳名稱_YYYY-MM-DD，同名同日可為 …-2、…-3（由最後一個 _ 起為日期段） */
 function isGroupOrderSheetName_(n) {
   if (!n || typeof n !== "string") return false;
   var lastU = n.lastIndexOf("_");
   if (lastU < 1) return false;
   var datePart = n.substring(lastU + 1);
   if (!/^(\d{4}-\d{2}-\d{2})(-\d+)?$/.test(datePart)) return false;
-  var rest = n.substring(0, lastU);
-  var secondU = rest.lastIndexOf("_");
-  if (secondU < 1) return false;
-  var titlePart = rest.substring(0, secondU).trim();
-  var hostPart = rest.substring(secondU + 1).trim();
-  if (!titlePart || !hostPart) return false;
+  var restaurantPart = n.substring(0, lastU).trim();
+  if (!restaurantPart) return false;
   return parseDateFromName_(n) !== null;
 }
 
@@ -346,9 +362,8 @@ function handleCreateGroupOrder_(body) {
   var orderTypeLabel = orderTypeRaw === "drink" ? "飲料" : "食物";
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var safeTitle = sanitizeSheetPart_(title, 50);
-  var safeHost = sanitizeSheetPart_(host, 30);
-  var baseName = safeTitle + "_" + safeHost + "_" + date;
+  var safeTitle = sanitizeSheetPart_(title, 80);
+  var baseName = safeTitle + "_" + date;
   var existing = ss.getSheets().map(function (s) {
     return s.getName();
   });
@@ -619,8 +634,21 @@ function handleReorderGroupOrder_(body) {
   sheet.getRange("B5").setValue(STATUS_ACTIVE);
   if (deadline) sheet.getRange("B2").setValue(deadline);
   sheet.getRange("B7").setValue("");
+  var newHost = String(body.host || "").trim();
+  if (newHost) sheet.getRange("B6").setValue(newHost);
 
   return jsonResponse_({ ok: true, round: newRound });
+}
+
+function handleUpdateGroupOrderImages_(body) {
+  var sheetName = String(body.sheetName || "").trim();
+  if (!sheetName || !isGroupOrderSheetName_(sheetName))
+    return jsonResponse_({ ok: false, error: "工作表名稱不合法" });
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return jsonResponse_({ ok: false, error: "找不到工作表" });
+  sheet.getRange("B3").setValue(String(body.imageUrl || "").trim());
+  return jsonResponse_({ ok: true });
 }
 
 var FORTUNE_LOG_SHEET = "_fortune_log";
