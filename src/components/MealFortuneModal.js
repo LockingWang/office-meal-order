@@ -4,7 +4,8 @@ import { useCallback, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { fetchMealFortune } from "../api/openaiMealFortune";
+import { buildUserMessage, fetchMealFortune, getFortuneModel, } from "../api/openaiMealFortune";
+import { logFortuneUsage } from "../api";
 import { FORTUNE_PSYCHIC_LOTTIE } from "../constants/fortuneLottie";
 import { toUserFacingErrorMessage } from "../utils/userFacingError";
 import styles from "./MealFortuneModal.module.css";
@@ -89,29 +90,54 @@ export function MealFortuneModal({ open, onClose, meta, userName, orders, }) {
         }
         const orderTypeLabel = meta.orderType === "drink" ? "飲料單" : "食物單";
         const existingItemHints = formatExistingItems(orders, 24);
+        const ctx = {
+            storeName: meta.name,
+            orderTypeLabel,
+            menuImageUrl: meta.imageUrls[0] || null,
+            deadline: meta.deadline || null,
+            host: meta.host || null,
+            userName: userName || "匿名",
+            gender: gender.trim() || null,
+            birthDate,
+            mood: mood.trim(),
+            otherNeeds: otherNeeds.trim(),
+            existingItemHints,
+        };
         setLoading(true);
         setResult(null);
+        let fortuneResult = null;
+        let errorMsg = null;
         try {
-            const text = await fetchMealFortune({
-                storeName: meta.name,
-                orderTypeLabel,
-                menuImageUrl: meta.imageUrl || null,
-                deadline: meta.deadline || null,
-                host: meta.host || null,
-                userName: userName || "匿名",
-                gender: gender.trim() || null,
-                birthDate,
-                mood: mood.trim(),
-                otherNeeds: otherNeeds.trim(),
-                existingItemHints,
-            });
-            setResult(text);
+            fortuneResult = await fetchMealFortune(ctx);
+            setResult(fortuneResult.text);
         }
         catch (err) {
-            setError(toUserFacingErrorMessage(err, "占卜失敗，請稍後再試。"));
+            errorMsg = toUserFacingErrorMessage(err, "占卜失敗，請稍後再試。");
+            setError(errorMsg);
         }
         finally {
             setLoading(false);
+            void logFortuneUsage({
+                userName: ctx.userName,
+                birthDate: ctx.birthDate,
+                gender: ctx.gender ?? "",
+                mood: ctx.mood,
+                otherNeeds: ctx.otherNeeds,
+                storeName: ctx.storeName,
+                orderTypeLabel: ctx.orderTypeLabel,
+                menuImageUrl: ctx.menuImageUrl ?? "",
+                deadline: ctx.deadline ?? "",
+                host: ctx.host ?? "",
+                existingItemHints: ctx.existingItemHints,
+                userMessage: buildUserMessage(ctx),
+                model: fortuneResult?.model ?? getFortuneModel(),
+                result: fortuneResult?.text ?? null,
+                error: errorMsg,
+                promptTokens: fortuneResult?.usage?.promptTokens ?? null,
+                completionTokens: fortuneResult?.usage?.completionTokens ?? null,
+                totalTokens: fortuneResult?.usage?.totalTokens ?? null,
+                status: fortuneResult ? "success" : "error",
+            });
         }
     };
     if (!open || typeof document === "undefined")

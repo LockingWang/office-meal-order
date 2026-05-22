@@ -27,7 +27,7 @@ function genderLine(gender) {
         return "（客戶未提供）";
     return gender.trim();
 }
-function buildUserMessage(ctx) {
+export function buildUserMessage(ctx) {
     const menuUrlLine = ctx.menuImageUrl && ctx.menuImageUrl.trim()
         ? ctx.menuImageUrl.trim()
         : "（客戶未提供菜單網址）";
@@ -79,6 +79,9 @@ function extractAssistantContent(choice) {
 }
 /** 預設使用具網搜的 Chat Completions 模型；可於 .env 覆寫 VITE_OPENAI_FORTUNE_MODEL */
 const DEFAULT_FORTUNE_MODEL = "gpt-4o-mini-search-preview";
+export function getFortuneModel() {
+    return import.meta.env.VITE_OPENAI_FORTUNE_MODEL?.trim() || DEFAULT_FORTUNE_MODEL;
+}
 /** 具網搜的 preview／search-api 等模型不接受 temperature，傳了會 400。 */
 function fortuneModelAcceptsTemperature(model) {
     const m = model.toLowerCase();
@@ -93,8 +96,7 @@ export async function fetchMealFortune(ctx) {
     if (!apiKey) {
         throw new Error("占卜服務暫未啟用，請稍後再試。");
     }
-    const model = import.meta.env.VITE_OPENAI_FORTUNE_MODEL?.trim() ||
-        DEFAULT_FORTUNE_MODEL;
+    const model = getFortuneModel();
     const payload = {
         model,
         web_search_options: {
@@ -130,14 +132,22 @@ export async function fetchMealFortune(ctx) {
         throw new Error(`OpenAI 請求失敗（${res.status}）：${detail}`);
     }
     let text;
+    let usage = null;
     try {
         const json = JSON.parse(raw);
         text = extractAssistantContent(json?.choices?.[0]);
+        if (json.usage) {
+            usage = {
+                promptTokens: json.usage.prompt_tokens ?? 0,
+                completionTokens: json.usage.completion_tokens ?? 0,
+                totalTokens: json.usage.total_tokens ?? 0,
+            };
+        }
     }
     catch {
         throw new Error("無法解析 OpenAI 回應。");
     }
     if (!text)
         throw new Error("OpenAI 未回傳內容。");
-    return text;
+    return { text, model, usage };
 }

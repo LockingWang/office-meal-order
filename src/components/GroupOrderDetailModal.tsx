@@ -101,6 +101,22 @@ export function GroupOrderDetailModal({
     }, 0);
   }, [detail]);
 
+  const detailMeta = detail?.meta;
+
+  useEffect(() => {
+    if (lightboxIdx === null || !detailMeta) return;
+    const images = detailMeta.imageUrls;
+    const idx = lightboxIdx;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setLightboxIdx(null);
+      else if (e.key === "ArrowLeft" && idx > 0) setLightboxIdx(idx - 1);
+      else if (e.key === "ArrowRight" && idx < images.length - 1)
+        setLightboxIdx(idx + 1);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxIdx, detailMeta]);
+
   if (!open || !sheetName) return null;
 
   const meta = detail?.meta;
@@ -213,19 +229,6 @@ export function GroupOrderDetailModal({
       setActionBusy(false);
     }
   }
-
-  useEffect(() => {
-    if (lightboxIdx === null || !meta) return;
-    const images = meta.imageUrls;
-    const idx = lightboxIdx;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setLightboxIdx(null);
-      else if (e.key === "ArrowLeft" && idx > 0) setLightboxIdx(idx - 1);
-      else if (e.key === "ArrowRight" && idx < images.length - 1) setLightboxIdx(idx + 1);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [lightboxIdx, meta]);
 
   async function handleSaveReferenceUrl() {
     if (!meta) return;

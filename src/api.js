@@ -36,11 +36,16 @@ function normalizeMeta(raw) {
         return null;
     const orderType = String(o.orderType ?? "").toLowerCase() === "drink" ? "drink" : "food";
     const status = String(o.status ?? "").toLowerCase() === "closed" ? "closed" : "active";
+    const imageUrls = String(o.imageUrl ?? "")
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
     return {
         sheetName: String(o.sheetName),
         name: String(o.name),
         deadline: String(o.deadline ?? ""),
-        imageUrl: String(o.imageUrl ?? ""),
+        imageUrls,
+        referenceUrl: String(o.referenceUrl ?? "").trim(),
         orderType,
         status,
         host: String(o.host ?? ""),
@@ -104,7 +109,12 @@ export async function fetchGroupOrderDetail(sheetName) {
     const orders = ordersRaw
         .map(normalizeOrder)
         .filter((x) => x !== null);
-    return { meta, orders };
+    const previousOrdersRaw = Array.isArray(o.previousOrders) ? o.previousOrders : [];
+    const previousOrders = previousOrdersRaw
+        .map(normalizeOrder)
+        .filter((x) => x !== null);
+    const round = typeof o.round === "number" ? Math.max(1, o.round) : 1;
+    return { meta, orders, previousOrders, round };
 }
 async function postAction(data, failMsg) {
     const base = getScriptUrl();
@@ -128,8 +138,12 @@ async function postAction(data, failMsg) {
     return json;
 }
 export async function createGroupOrder(payload) {
-    const json = await postAction({ action: "createGroupOrder", ...payload }, "建立團購單失敗，請稍後再試。");
+    const { imageUrls, ...rest } = payload;
+    const json = await postAction({ action: "createGroupOrder", ...rest, imageUrl: imageUrls.join("\n") }, "建立團購單失敗，請稍後再試。");
     return { sheetName: String(json.sheetName || "") };
+}
+export async function updateGroupOrderReferenceUrl(sheetName, referenceUrl) {
+    await postAction({ action: "updateGroupOrderReferenceUrl", sheetName, referenceUrl }, "更新參考連結失敗，請稍後再試。");
 }
 export async function submitOrder(payload) {
     const json = await postAction({ action: "submitOrder", ...payload }, "送出訂單失敗，請稍後再試。");
@@ -146,4 +160,21 @@ export async function closeGroupOrder(sheetName) {
 }
 export async function reopenGroupOrder(sheetName) {
     await postAction({ action: "reopenGroupOrder", sheetName }, "復活失敗，請稍後再試。");
+}
+export async function reorderGroupOrder(sheetName, deadline, host) {
+    await postAction({ action: "reorderGroupOrder", sheetName, deadline, host }, "重新訂購失敗，請稍後再試。");
+}
+export async function updateGroupOrderImages(sheetName, imageUrls) {
+    await postAction({ action: "updateGroupOrderImages", sheetName, imageUrl: imageUrls.join("\n") }, "更新圖片失敗，請稍後再試。");
+}
+export async function logFortuneUsage(payload) {
+    const base = getScriptUrl();
+    if (!base)
+        return;
+    try {
+        await postToAppsScript(base, { action: "logFortune", ...payload });
+    }
+    catch {
+        // logging should never break the user experience
+    }
 }
