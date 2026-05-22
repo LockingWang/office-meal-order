@@ -30,6 +30,8 @@ export type Order = {
 export type GroupOrderDetail = {
   meta: GroupOrderMeta;
   orders: Order[];
+  previousOrders: Order[];
+  round: number;
 };
 
 export type CreateGroupOrderPayload = {
@@ -168,7 +170,12 @@ export async function fetchGroupOrderDetail(
   const orders = ordersRaw
     .map(normalizeOrder)
     .filter((x): x is Order => x !== null);
-  return { meta, orders };
+  const previousOrdersRaw = Array.isArray(o.previousOrders) ? o.previousOrders : [];
+  const previousOrders = previousOrdersRaw
+    .map(normalizeOrder)
+    .filter((x): x is Order => x !== null);
+  const round = typeof o.round === "number" ? Math.max(1, o.round) : 1;
+  return { meta, orders, previousOrders, round };
 }
 
 async function postAction(
@@ -246,6 +253,16 @@ export async function reopenGroupOrder(sheetName: string): Promise<void> {
   await postAction(
     { action: "reopenGroupOrder", sheetName },
     "復活失敗，請稍後再試。"
+  );
+}
+
+export async function reorderGroupOrder(
+  sheetName: string,
+  deadline: string
+): Promise<void> {
+  await postAction(
+    { action: "reorderGroupOrder", sheetName, deadline },
+    "重新訂購失敗，請稍後再試。"
   );
 }
 

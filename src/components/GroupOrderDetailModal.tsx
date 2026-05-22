@@ -3,7 +3,7 @@ import {
   closeGroupOrder,
   deleteOrder,
   fetchGroupOrderDetail,
-  reopenGroupOrder,
+  reorderGroupOrder,
   submitOrder,
   updateOrder,
   type GroupOrderDetail,
@@ -38,7 +38,10 @@ export function GroupOrderDetailModal({
   } | null>(null);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [prefillOrder, setPrefillOrder] = useState<Order | null>(null);
   const [fortuneOpen, setFortuneOpen] = useState(false);
+  const [reorderOpen, setReorderOpen] = useState(false);
+  const [reorderDeadline, setReorderDeadline] = useState("");
 
   const load = useCallback(async () => {
     if (!sheetName) return;
@@ -71,14 +74,15 @@ export function GroupOrderDetailModal({
         !actionBusy &&
         !editingOrder &&
         !createOpen &&
-        !fortuneOpen
+        !fortuneOpen &&
+        !reorderOpen
       ) {
         onClose();
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, actionBusy, editingOrder, createOpen, fortuneOpen, onClose]);
+  }, [open, actionBusy, editingOrder, createOpen, fortuneOpen, reorderOpen, onClose]);
 
   const totalAmount = useMemo(() => {
     if (!detail) return 0;
@@ -180,24 +184,30 @@ export function GroupOrderDetailModal({
     }
   }
 
-  async function handleReopen() {
+  async function handleReorder(deadline: string) {
     if (!meta) return;
-    if (!window.confirm(`要把「${meta.name}」復活回進行中嗎？`)) return;
     setActionBusy(true);
     setActionMsg(null);
     try {
-      await reopenGroupOrder(meta.sheetName);
-      setActionMsg({ type: "ok", text: "已復活。" });
+      await reorderGroupOrder(meta.sheetName, deadline);
+      setReorderOpen(false);
+      setReorderDeadline("");
+      setActionMsg({ type: "ok", text: "已開始新一輪訂購。" });
       await load();
       onChanged();
     } catch (err) {
       setActionMsg({
         type: "err",
-        text: toUserFacingErrorMessage(err, "復活失敗，請稍後再試。"),
+        text: toUserFacingErrorMessage(err, "重新訂購失敗，請稍後再試。"),
       });
     } finally {
       setActionBusy(false);
     }
+  }
+
+  function handleRepeat(order: Order) {
+    setPrefillOrder({ ...order, messageToHost: "" });
+    setCreateOpen(true);
   }
 
   return (
@@ -206,7 +216,7 @@ export function GroupOrderDetailModal({
       role="dialog"
       aria-modal="true"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !actionBusy && !fortuneOpen)
+        if (e.target === e.currentTarget && !actionBusy && !fortuneOpen && !reorderOpen)
           onClose();
       }}
     >
@@ -238,11 +248,11 @@ export function GroupOrderDetailModal({
           {meta && isClosed && (
             <button
               type="button"
-              className={styles.reopenBtn}
-              onClick={handleReopen}
+              className={styles.reorderBtn}
+              onClick={() => { setReorderDeadline(""); setReorderOpen(true); }}
               disabled={actionBusy}
             >
-              復活
+              重新訂購
             </button>
           )}
         </div>
@@ -307,6 +317,88 @@ export function GroupOrderDetailModal({
                 )}
               </section>
 
+              {detail.previousOrders.length > 0 && (
+                <section className={styles.prevOrdersCard}>
+                  <div className={styles.ordersHeader}>
+                    <h3 className={styles.prevOrdersTitle}>
+                      上一次訂購{" "}
+                      <span className={styles.orderCount}>
+                        {detail.previousOrders.length} 筆
+                      </span>
+                    </h3>
+                  </div>
+                  <ul className={styles.orderList}>
+                    {detail.previousOrders.map((o) => {
+                      const isMine = o.name === userName && !!userName;
+                      const subtotal =
+                        typeof o.price === "number"
+                          ? o.price * (o.quantity || 0)
+                          : null;
+                      return (
+                        <li
+                          key={o.id}
+                          className={`${styles.orderItem} ${
+                            isMine ? styles.orderItemMine : ""
+                          }`}
+                        >
+                          <div className={styles.orderTop}>
+                            <span className={styles.orderName}>
+                              {o.name}
+                              {isMine && (
+                                <span className={styles.meTag}>我</span>
+                              )}
+                            </span>
+                            {subtotal != null && (
+                              <span className={styles.orderSubtotal}>
+                                NT$ {subtotal}
+                              </span>
+                            )}
+                          </div>
+                          <div className={styles.orderBody}>
+                            <span className={styles.orderItemName}>
+                              {o.itemName}
+                            </span>
+                            <span className={styles.orderQty}>
+                              x{o.quantity}
+                            </span>
+                            {o.price != null && (
+                              <span className={styles.orderPrice}>
+                                NT$ {o.price}
+                              </span>
+                            )}
+                          </div>
+                          {(o.iceLevel || o.sugarLevel) && (
+                            <div className={styles.orderTags}>
+                              {o.iceLevel && (
+                                <span className={styles.tag}>{o.iceLevel}</span>
+                              )}
+                              {o.sugarLevel && (
+                                <span className={styles.tag}>{o.sugarLevel}</span>
+                              )}
+                            </div>
+                          )}
+                          {o.note && (
+                            <p className={styles.orderNote}>{o.note}</p>
+                          )}
+                          {!isClosed && (
+                            <div className={styles.orderActions}>
+                              <button
+                                type="button"
+                                className={styles.repeatBtn}
+                                onClick={() => handleRepeat(o)}
+                                disabled={actionBusy}
+                              >
+                                再點一次
+                              </button>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              )}
+
               <section className={styles.ordersCard}>
                 <div className={styles.ordersHeader}>
                   <h3 className={styles.ordersTitle}>
@@ -330,7 +422,7 @@ export function GroupOrderDetailModal({
                       <button
                         type="button"
                         className={styles.addOrderBtn}
-                        onClick={() => setCreateOpen(true)}
+                        onClick={() => { setPrefillOrder(null); setCreateOpen(true); }}
                         disabled={actionBusy}
                       >
                         + 新增訂單
@@ -463,8 +555,9 @@ export function GroupOrderDetailModal({
           open={createOpen}
           mode="create"
           orderType={meta.orderType}
+          initial={prefillOrder}
           defaultName={userName}
-          onClose={() => setCreateOpen(false)}
+          onClose={() => { setCreateOpen(false); setPrefillOrder(null); }}
           onSubmit={handleCreateSubmit}
         />
       )}
@@ -487,6 +580,53 @@ export function GroupOrderDetailModal({
           userName={userName}
           orders={orders}
         />
+      )}
+
+      {reorderOpen && (
+        <div
+          className={styles.reorderOverlay}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !actionBusy) setReorderOpen(false);
+          }}
+        >
+          <div className={styles.reorderDialog}>
+            <h3 className={styles.reorderDialogTitle}>重新訂購</h3>
+            <p className={styles.reorderDialogDesc}>
+              開啟新一輪訂購。上一輪訂單將保留作為參考，不會被刪除。
+            </p>
+            <div className={styles.reorderDialogField}>
+              <label className={styles.reorderDialogLabel} htmlFor="reorder-deadline">
+                新截止時間（選填）
+              </label>
+              <input
+                id="reorder-deadline"
+                type="datetime-local"
+                className={styles.reorderDialogInput}
+                value={reorderDeadline}
+                onChange={(e) => setReorderDeadline(e.target.value)}
+                disabled={actionBusy}
+              />
+            </div>
+            <div className={styles.reorderDialogActions}>
+              <button
+                type="button"
+                className={styles.reorderCancelBtn}
+                onClick={() => setReorderOpen(false)}
+                disabled={actionBusy}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className={styles.reorderConfirmBtn}
+                onClick={() => void handleReorder(reorderDeadline)}
+                disabled={actionBusy}
+              >
+                {actionBusy ? "處理中…" : "確認重新訂購"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

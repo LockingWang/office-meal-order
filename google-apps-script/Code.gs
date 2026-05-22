@@ -33,6 +33,7 @@ var ORDER_HEADERS_FOOD = [
   "價格",
   "備註",
   MESSAGE_HEADER,
+  "輪次",
 ];
 var ORDER_HEADERS_DRINK = [
   "訂單ID",
@@ -45,6 +46,7 @@ var ORDER_HEADERS_DRINK = [
   "冰量",
   "糖度",
   MESSAGE_HEADER,
+  "輪次",
 ];
 
 var STATUS_ACTIVE = "進行中";
@@ -88,6 +90,7 @@ function doPost(e) {
   if (action === "deleteOrder") return handleDeleteOrder_(body);
   if (action === "closeGroupOrder") return handleCloseGroupOrder_(body);
   if (action === "reopenGroupOrder") return handleReopenGroupOrder_(body);
+  if (action === "reorderGroupOrder") return handleReorderGroupOrder_(body);
   if (action === "logFortune") return handleLogFortune_(body);
   return jsonResponse_({ ok: false, error: "未知的 action：" + action });
 }
@@ -108,6 +111,12 @@ function nowString_() {
     Session.getScriptTimeZone(),
     "yyyy-MM-dd HH:mm:ss"
   );
+}
+
+function getSheetRound_(sheet) {
+  var v = sheet.getRange("B8").getValue();
+  var n = Number(v);
+  return (!isNaN(n) && isFinite(n) && n >= 1) ? Math.floor(n) : 1;
 }
 
 /** 團購工作表：團購單名稱_主揪名稱_YYYY-MM-DD，同名同日可為 …-2、…-3（由最後一個 _ 起為日期段） */
@@ -216,8 +225,11 @@ function getGroupOrderDetail_(sheetName) {
   var headers =
     meta.orderType === "drink" ? ORDER_HEADERS_DRINK : ORDER_HEADERS_FOOD;
   var messageIdx = headers.indexOf(MESSAGE_HEADER);
+  var roundColIdx = headers.length - 1; // "輪次" is the last column
+  var currentRound = getSheetRound_(sheet);
   var lastRow = sheet.getLastRow();
-  var orders = [];
+  var currentOrders = [];
+  var previousOrders = [];
   if (lastRow >= ORDER_FIRST_ROW) {
     var range = sheet.getRange(
       ORDER_FIRST_ROW,
@@ -260,13 +272,23 @@ function getGroupOrderDetail_(sheetName) {
       }
       order.messageToHost =
         messageIdx >= 0 ? String(row[messageIdx] || "").trim() : "";
-      orders.push(order);
+      var roundRaw = row[roundColIdx];
+      var orderRound = (!isNaN(Number(roundRaw)) && isFinite(Number(roundRaw)) && Number(roundRaw) >= 1)
+        ? Math.floor(Number(roundRaw))
+        : 1;
+      if (orderRound === currentRound) {
+        currentOrders.push(order);
+      } else if (orderRound === currentRound - 1) {
+        previousOrders.push(order);
+      }
     }
   }
 
   return {
     meta: meta,
-    orders: orders,
+    orders: currentOrders,
+    previousOrders: previousOrders,
+    round: currentRound,
   };
 }
 
@@ -332,7 +354,10 @@ function handleCreateGroupOrder_(body) {
     .getRange(ORDER_HEADER_ROW, 1, 1, headers.length)
     .setValues([headers]);
 
-  sheet.getRange("A1:A7").setFontWeight("bold");
+  sheet.getRange("A8").setValue("目前輪次");
+  sheet.getRange("B8").setValue(1);
+
+  sheet.getRange("A1:A8").setFontWeight("bold");
   sheet
     .getRange(ORDER_HEADER_ROW, 1, 1, headers.length)
     .setFontWeight("bold")
@@ -340,8 +365,8 @@ function handleCreateGroupOrder_(body) {
 
   var columnWidths =
     orderTypeRaw === "drink"
-      ? [200, 150, 100, 220, 70, 80, 200, 100, 100, 240]
-      : [200, 150, 100, 220, 70, 80, 220, 240];
+      ? [200, 150, 100, 220, 70, 80, 200, 100, 100, 240, 60]
+      : [200, 150, 100, 220, 70, 80, 220, 240, 60];
   for (var i = 0; i < columnWidths.length; i++) {
     sheet.setColumnWidth(i + 1, columnWidths[i]);
   }
@@ -354,7 +379,7 @@ function handleCreateGroupOrder_(body) {
 function ensureMessageHeader_(sheet, meta) {
   var headers =
     meta.orderType === "drink" ? ORDER_HEADERS_DRINK : ORDER_HEADERS_FOOD;
-  var col = headers.length;
+  var col = headers.indexOf(MESSAGE_HEADER) + 1; // 1-indexed; 輪次 is appended after
   var current = String(
     sheet.getRange(ORDER_HEADER_ROW, col).getValue() || ""
   ).trim();
@@ -419,6 +444,7 @@ function buildOrderRow_(meta, order) {
     row.push(order.sugarLevel || "");
   }
   row.push(order.messageToHost || "");
+  row.push(order.round || 1);
   return row;
 }
 
@@ -470,6 +496,7 @@ function handleSubmitOrder_(body) {
   var newOrder = v.order;
   newOrder.id = uuid_();
   newOrder.timestamp = nowString_();
+  newOrder.round = getSheetRound_(sheet);
 
   var row = buildOrderRow_(meta, newOrder);
   sheet.appendRow(row);
@@ -495,6 +522,7 @@ function handleUpdateOrder_(body) {
 
   var order = v.order;
   order.id = orderId;
+  order.round = getSheetRound_(sheet);
   var tsExisting = sheet.getRange(rowNum, 2).getValue();
   order.timestamp =
     tsExisting instanceof Date
@@ -542,6 +570,29 @@ function handleReopenGroupOrder_(body) {
   sheet.getRange("B5").setValue(STATUS_ACTIVE);
   sheet.getRange("B7").setValue("");
   return jsonResponse_({ ok: true });
+}
+
+function handleReorderGroupOrder_(body) {
+  var sheetName = String(body.sheetName || "").trim();
+  var deadline = String(body.deadline || "").trim();
+
+  if (!sheetName) return jsonResponse_({ ok: false, error: "缺少 sheetName" });
+  if (!isGroupOrderSheetName_(sheetName)) return jsonResponse_({ ok: false, error: "工作表名稱不合法" });
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return jsonResponse_({ ok: false, error: "找不到工作表" });
+
+  var meta = readSheetMeta_(sheet);
+  if (meta.status !== "closed") return jsonResponse_({ ok: false, error: "只能對已結案的團購單重新訂購" });
+
+  var newRound = getSheetRound_(sheet) + 1;
+  sheet.getRange("B8").setValue(newRound);
+  sheet.getRange("B5").setValue(STATUS_ACTIVE);
+  if (deadline) sheet.getRange("B2").setValue(deadline);
+  sheet.getRange("B7").setValue("");
+
+  return jsonResponse_({ ok: true, round: newRound });
 }
 
 var FORTUNE_LOG_SHEET = "_fortune_log";
