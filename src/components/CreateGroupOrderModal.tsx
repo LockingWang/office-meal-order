@@ -32,6 +32,7 @@ export function CreateGroupOrderModal({
   const [date, setDate] = useState(todayString());
   const [deadline, setDeadline] = useState("");
   const [imageUrlsText, setImageUrlsText] = useState("");
+  const [referenceUrl, setReferenceUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +43,7 @@ export function CreateGroupOrderModal({
       setDate(todayString());
       setDeadline("");
       setImageUrlsText("");
+      setReferenceUrl("");
       setError(null);
       setSubmitting(false);
     }
@@ -83,6 +85,7 @@ export function CreateGroupOrderModal({
       date,
       deadline: deadline.trim(),
       imageUrls,
+      referenceUrl: referenceUrl.trim(),
       orderType,
       host: host.trim(),
     };
@@ -202,6 +205,20 @@ export function CreateGroupOrderModal({
             />
             <small className={styles.fieldHint}>
               每行填一個網址，可附多張菜單圖片；之後也可在訂單詳情頁編輯。
+            </small>
+          </label>
+
+          <label className={styles.field}>
+            <span>參考連結（選填）</span>
+            <input
+              type="url"
+              className={styles.input}
+              value={referenceUrl}
+              onChange={(e) => setReferenceUrl(e.target.value)}
+              placeholder="https://restaurant.com"
+            />
+            <small className={styles.fieldHint}>
+              餐廳官網或外送頁面，會在訂單詳情顯示為可點擊按鈕。
             </small>
           </label>
 

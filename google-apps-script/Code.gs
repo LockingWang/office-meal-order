@@ -111,6 +111,7 @@ function doPost(e) {
   if (action === "reopenGroupOrder") return handleReopenGroupOrder_(body);
   if (action === "reorderGroupOrder") return handleReorderGroupOrder_(body);
   if (action === "updateGroupOrderImages") return handleUpdateGroupOrderImages_(body);
+  if (action === "updateGroupOrderReferenceUrl") return handleUpdateGroupOrderReferenceUrl_(body);
   if (action === "logFortune") return handleLogFortune_(body);
   return jsonResponse_({ ok: false, error: "未知的 action：" + action });
 }
@@ -178,6 +179,7 @@ function readSheetMeta_(sheet) {
   var name = String(sheet.getRange("B1").getValue() || "").trim();
   var deadline = formatDateValue_(sheet.getRange("B2").getValue());
   var imageUrl = String(sheet.getRange("B3").getValue() || "").trim();
+  var referenceUrl = String(sheet.getRange("C3").getValue() || "").trim();
   var typeRaw = String(sheet.getRange("B4").getValue() || "").trim();
   var orderType = typeRaw === "飲料" ? "drink" : "food";
   var statusRaw = String(sheet.getRange("B5").getValue() || "").trim();
@@ -198,6 +200,7 @@ function readSheetMeta_(sheet) {
     name: name,
     deadline: deadline,
     imageUrl: imageUrl,
+    referenceUrl: referenceUrl,
     orderType: orderType,
     status: status,
     host: host,
@@ -382,6 +385,7 @@ function handleCreateGroupOrder_(body) {
   sheet.getRange("B2").setValue(deadline);
   sheet.getRange("A3").setValue("菜單圖片連結");
   sheet.getRange("B3").setValue(imageUrl);
+  sheet.getRange("C3").setValue(String(body.referenceUrl || "").trim());
   sheet.getRange("A4").setValue("團購類型");
   sheet.getRange("B4").setValue(orderTypeLabel);
   sheet.getRange("A5").setValue("狀態");
@@ -648,6 +652,17 @@ function handleUpdateGroupOrderImages_(body) {
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) return jsonResponse_({ ok: false, error: "找不到工作表" });
   sheet.getRange("B3").setValue(String(body.imageUrl || "").trim());
+  return jsonResponse_({ ok: true });
+}
+
+function handleUpdateGroupOrderReferenceUrl_(body) {
+  var sheetName = String(body.sheetName || "").trim();
+  if (!sheetName || !isGroupOrderSheetName_(sheetName))
+    return jsonResponse_({ ok: false, error: "工作表名稱不合法" });
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return jsonResponse_({ ok: false, error: "找不到工作表" });
+  sheet.getRange("C3").setValue(String(body.referenceUrl || "").trim());
   return jsonResponse_({ ok: true });
 }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   closeGroupOrder,
   deleteOrder,
@@ -6,6 +7,7 @@ import {
   reorderGroupOrder,
   submitOrder,
   updateGroupOrderImages,
+  updateGroupOrderReferenceUrl,
   updateOrder,
   type GroupOrderDetail,
   type Order,
@@ -45,6 +47,9 @@ export function GroupOrderDetailModal({
   const [reorderDeadline, setReorderDeadline] = useState("");
   const [editingImages, setEditingImages] = useState(false);
   const [imageUrlsInput, setImageUrlsInput] = useState("");
+  const [editingRefUrl, setEditingRefUrl] = useState(false);
+  const [refUrlInput, setRefUrlInput] = useState("");
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     if (!sheetName) return;
@@ -78,14 +83,15 @@ export function GroupOrderDetailModal({
         !editingOrder &&
         !createOpen &&
         !fortuneOpen &&
-        !reorderOpen
+        !reorderOpen &&
+        lightboxIdx === null
       ) {
         onClose();
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, actionBusy, editingOrder, createOpen, fortuneOpen, reorderOpen, onClose]);
+  }, [open, actionBusy, editingOrder, createOpen, fortuneOpen, reorderOpen, lightboxIdx, onClose]);
 
   const totalAmount = useMemo(() => {
     if (!detail) return 0;
@@ -208,6 +214,39 @@ export function GroupOrderDetailModal({
     }
   }
 
+  useEffect(() => {
+    if (lightboxIdx === null || !meta) return;
+    const images = meta.imageUrls;
+    const idx = lightboxIdx;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setLightboxIdx(null);
+      else if (e.key === "ArrowLeft" && idx > 0) setLightboxIdx(idx - 1);
+      else if (e.key === "ArrowRight" && idx < images.length - 1) setLightboxIdx(idx + 1);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxIdx, meta]);
+
+  async function handleSaveReferenceUrl() {
+    if (!meta) return;
+    setActionBusy(true);
+    setActionMsg(null);
+    try {
+      await updateGroupOrderReferenceUrl(meta.sheetName, refUrlInput.trim());
+      setEditingRefUrl(false);
+      setActionMsg({ type: "ok", text: "已更新參考連結。" });
+      await load();
+      onChanged();
+    } catch (err) {
+      setActionMsg({
+        type: "err",
+        text: toUserFacingErrorMessage(err, "更新參考連結失敗，請稍後再試。"),
+      });
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
   async function handleSaveImages() {
     if (!meta) return;
     setActionBusy(true);
@@ -322,6 +361,61 @@ export function GroupOrderDetailModal({
                   </p>
                 )}
 
+                <div className={styles.refUrlRow}>
+                  {editingRefUrl ? (
+                    <div className={styles.refUrlEdit}>
+                      <input
+                        type="url"
+                        className={styles.refUrlInput}
+                        value={refUrlInput}
+                        onChange={(e) => setRefUrlInput(e.target.value)}
+                        placeholder="https://restaurant.com"
+                        disabled={actionBusy}
+                        autoFocus
+                      />
+                      <div className={styles.refUrlEditActions}>
+                        <button
+                          type="button"
+                          className={styles.smallBtn}
+                          onClick={() => setEditingRefUrl(false)}
+                          disabled={actionBusy}
+                        >
+                          取消
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.smallBtn}
+                          onClick={() => void handleSaveReferenceUrl()}
+                          disabled={actionBusy}
+                        >
+                          儲存
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {meta.referenceUrl && (
+                        <a
+                          href={meta.referenceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.refUrlBtn}
+                        >
+                          前往餐廳網頁
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        className={styles.imageEditToggle}
+                        onClick={() => { setRefUrlInput(meta.referenceUrl); setEditingRefUrl(true); }}
+                        disabled={actionBusy}
+                      >
+                        {meta.referenceUrl ? "編輯連結" : "+ 新增參考連結"}
+                      </button>
+                    </>
+                  )}
+                </div>
+
                 <div className={styles.imageSectionHeader}>
                   <button
                     type="button"
@@ -367,12 +461,12 @@ export function GroupOrderDetailModal({
                   </div>
                 ) : meta.imageUrls.length > 0 ? (
                   meta.imageUrls.map((url, idx) => (
-                    <a
+                    <button
                       key={idx}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      type="button"
                       className={styles.imageWrap}
+                      onClick={() => setLightboxIdx(idx)}
+                      title="點擊放大"
                     >
                       <img
                         className={styles.menuImage}
@@ -380,7 +474,7 @@ export function GroupOrderDetailModal({
                         alt={`${meta.name} 菜單${meta.imageUrls.length > 1 ? ` ${idx + 1}` : ""}`}
                         loading="lazy"
                       />
-                    </a>
+                    </button>
                   ))
                 ) : (
                   <p className={styles.mutedSmall}>沒有菜單圖片。</p>
@@ -651,6 +745,53 @@ export function GroupOrderDetailModal({
           orders={orders}
         />
       )}
+
+      {lightboxIdx !== null && meta && meta.imageUrls.length > 0 &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className={styles.lightboxBackdrop}
+            onClick={() => setLightboxIdx(null)}
+          >
+            {meta.imageUrls.length > 1 && lightboxIdx > 0 && (
+              <button
+                type="button"
+                className={`${styles.lightboxNav} ${styles.lightboxNavPrev}`}
+                onClick={(e) => { e.stopPropagation(); setLightboxIdx(lightboxIdx - 1); }}
+              >
+                ‹
+              </button>
+            )}
+            <img
+              className={styles.lightboxImage}
+              src={meta.imageUrls[lightboxIdx]}
+              alt="菜單"
+              onClick={(e) => e.stopPropagation()}
+            />
+            {meta.imageUrls.length > 1 && lightboxIdx < meta.imageUrls.length - 1 && (
+              <button
+                type="button"
+                className={`${styles.lightboxNav} ${styles.lightboxNavNext}`}
+                onClick={(e) => { e.stopPropagation(); setLightboxIdx(lightboxIdx + 1); }}
+              >
+                ›
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles.lightboxClose}
+              onClick={() => setLightboxIdx(null)}
+            >
+              ×
+            </button>
+            {meta.imageUrls.length > 1 && (
+              <div className={styles.lightboxCounter}>
+                {lightboxIdx + 1} / {meta.imageUrls.length}
+              </div>
+            )}
+          </div>,
+          document.body
+        )}
 
       {reorderOpen && (
         <div

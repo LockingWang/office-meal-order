@@ -8,6 +8,7 @@ export type GroupOrderMeta = {
   name: string;
   deadline: string;
   imageUrls: string[];
+  referenceUrl: string;
   orderType: OrderType;
   status: GroupOrderStatus;
   host: string;
@@ -39,6 +40,7 @@ export type CreateGroupOrderPayload = {
   date: string;
   deadline: string;
   imageUrls: string[];
+  referenceUrl: string;
   orderType: OrderType;
   host: string;
 };
@@ -114,6 +116,7 @@ function normalizeMeta(raw: unknown): GroupOrderMeta | null {
     name: String(o.name),
     deadline: String(o.deadline ?? ""),
     imageUrls,
+    referenceUrl: String(o.referenceUrl ?? "").trim(),
     orderType,
     status,
     host: String(o.host ?? ""),
@@ -221,6 +224,16 @@ export async function createGroupOrder(
     "建立團購單失敗，請稍後再試。"
   );
   return { sheetName: String(json.sheetName || "") };
+}
+
+export async function updateGroupOrderReferenceUrl(
+  sheetName: string,
+  referenceUrl: string
+): Promise<void> {
+  await postAction(
+    { action: "updateGroupOrderReferenceUrl", sheetName, referenceUrl },
+    "更新參考連結失敗，請稍後再試。"
+  );
 }
 
 export async function submitOrder(
