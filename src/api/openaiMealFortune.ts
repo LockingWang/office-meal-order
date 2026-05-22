@@ -45,7 +45,7 @@ function genderLine(gender: string | null): string {
   return gender.trim();
 }
 
-function buildUserMessage(ctx: MealFortuneContext): string {
+export function buildUserMessage(ctx: MealFortuneContext): string {
   const menuUrlLine =
     ctx.menuImageUrl && ctx.menuImageUrl.trim()
       ? ctx.menuImageUrl.trim()
@@ -103,6 +103,22 @@ function extractAssistantContent(
 /** 預設使用具網搜的 Chat Completions 模型；可於 .env 覆寫 VITE_OPENAI_FORTUNE_MODEL */
 const DEFAULT_FORTUNE_MODEL = "gpt-4o-mini-search-preview";
 
+export function getFortuneModel(): string {
+  return import.meta.env.VITE_OPENAI_FORTUNE_MODEL?.trim() || DEFAULT_FORTUNE_MODEL;
+}
+
+export type FortuneUsage = {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+};
+
+export type FortuneResult = {
+  text: string;
+  model: string;
+  usage: FortuneUsage | null;
+};
+
 /** 具網搜的 preview／search-api 等模型不接受 temperature，傳了會 400。 */
 function fortuneModelAcceptsTemperature(model: string): boolean {
   const m = model.toLowerCase();
@@ -113,15 +129,13 @@ function fortuneModelAcceptsTemperature(model: string): boolean {
 
 export async function fetchMealFortune(
   ctx: MealFortuneContext
-): Promise<string> {
+): Promise<FortuneResult> {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("占卜服務暫未啟用，請稍後再試。");
   }
 
-  const model =
-    import.meta.env.VITE_OPENAI_FORTUNE_MODEL?.trim() ||
-    DEFAULT_FORTUNE_MODEL;
+  const model = getFortuneModel();
 
   const payload: Record<string, unknown> = {
     model,
@@ -159,14 +173,23 @@ export async function fetchMealFortune(
   }
 
   let text: string;
+  let usage: FortuneUsage | null = null;
   try {
     const json = JSON.parse(raw) as {
       choices?: Array<{ message?: { content?: unknown } }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
     };
     text = extractAssistantContent(json?.choices?.[0]);
+    if (json.usage) {
+      usage = {
+        promptTokens: json.usage.prompt_tokens ?? 0,
+        completionTokens: json.usage.completion_tokens ?? 0,
+        totalTokens: json.usage.total_tokens ?? 0,
+      };
+    }
   } catch {
     throw new Error("無法解析 OpenAI 回應。");
   }
   if (!text) throw new Error("OpenAI 未回傳內容。");
-  return text;
+  return { text, model, usage };
 }

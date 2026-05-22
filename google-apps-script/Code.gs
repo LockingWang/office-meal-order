@@ -88,6 +88,7 @@ function doPost(e) {
   if (action === "deleteOrder") return handleDeleteOrder_(body);
   if (action === "closeGroupOrder") return handleCloseGroupOrder_(body);
   if (action === "reopenGroupOrder") return handleReopenGroupOrder_(body);
+  if (action === "logFortune") return handleLogFortune_(body);
   return jsonResponse_({ ok: false, error: "未知的 action：" + action });
 }
 
@@ -541,4 +542,72 @@ function handleReopenGroupOrder_(body) {
   sheet.getRange("B5").setValue(STATUS_ACTIVE);
   sheet.getRange("B7").setValue("");
   return jsonResponse_({ ok: true });
+}
+
+var FORTUNE_LOG_SHEET = "_fortune_log";
+var FORTUNE_LOG_HEADERS = [
+  "timestamp",
+  "status",
+  "userName",
+  "birthDate",
+  "gender",
+  "mood",
+  "otherNeeds",
+  "storeName",
+  "orderTypeLabel",
+  "menuImageUrl",
+  "deadline",
+  "host",
+  "existingItemHints",
+  "model",
+  "promptTokens",
+  "completionTokens",
+  "totalTokens",
+  "userMessage",
+  "result",
+  "error",
+];
+
+function handleLogFortune_(body) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(FORTUNE_LOG_SHEET);
+    if (!sheet) {
+      sheet = ss.insertSheet(FORTUNE_LOG_SHEET);
+      sheet.hideSheet();
+      sheet.appendRow(FORTUNE_LOG_HEADERS);
+      sheet.getRange(1, 1, 1, FORTUNE_LOG_HEADERS.length)
+        .setFontWeight("bold")
+        .setBackground("#d0e4ff");
+      sheet.setFrozenRows(1);
+    }
+
+    var row = [
+      nowString_(),
+      String(body.status || ""),
+      String(body.userName || ""),
+      String(body.birthDate || ""),
+      String(body.gender || ""),
+      String(body.mood || ""),
+      String(body.otherNeeds || ""),
+      String(body.storeName || ""),
+      String(body.orderTypeLabel || ""),
+      String(body.menuImageUrl || ""),
+      String(body.deadline || ""),
+      String(body.host || ""),
+      String(body.existingItemHints || ""),
+      String(body.model || ""),
+      body.promptTokens !== null && body.promptTokens !== undefined ? Number(body.promptTokens) : "",
+      body.completionTokens !== null && body.completionTokens !== undefined ? Number(body.completionTokens) : "",
+      body.totalTokens !== null && body.totalTokens !== undefined ? Number(body.totalTokens) : "",
+      String(body.userMessage || ""),
+      String(body.result || ""),
+      String(body.error || ""),
+    ];
+    sheet.appendRow(row);
+
+    return jsonResponse_({ ok: true });
+  } catch (err) {
+    return jsonResponse_({ ok: false, error: String(err) });
+  }
 }

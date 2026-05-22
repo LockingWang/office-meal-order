@@ -248,3 +248,35 @@ export async function reopenGroupOrder(sheetName: string): Promise<void> {
     "復活失敗，請稍後再試。"
   );
 }
+
+export type FortuneLogPayload = {
+  userName: string;
+  birthDate: string;
+  gender: string;
+  mood: string;
+  otherNeeds: string;
+  storeName: string;
+  orderTypeLabel: string;
+  menuImageUrl: string;
+  deadline: string;
+  host: string;
+  existingItemHints: string;
+  userMessage: string;
+  model: string;
+  result: string | null;
+  error: string | null;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
+  status: "success" | "error";
+};
+
+export async function logFortuneUsage(payload: FortuneLogPayload): Promise<void> {
+  const base = getScriptUrl();
+  if (!base) return;
+  try {
+    await postToAppsScript(base, { action: "logFortune", ...payload });
+  } catch {
+    // logging should never break the user experience
+  }
+}
