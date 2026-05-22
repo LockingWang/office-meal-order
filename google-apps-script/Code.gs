@@ -233,13 +233,18 @@ function getGroupOrderDetail_(sheetName) {
   var currentOrders = [];
   var previousOrders = [];
   if (lastRow >= ORDER_FIRST_ROW) {
+    // 不超過工作表實際欄數，避免舊工作表刪欄後 getRange 拋出例外
+    var actualCols = Math.min(headers.length, sheet.getMaxColumns());
     var range = sheet.getRange(
       ORDER_FIRST_ROW,
       1,
       lastRow - ORDER_FIRST_ROW + 1,
-      headers.length
+      actualCols
     );
     var values = range.getValues();
+
+    // 第一輪：收集所有訂單並記錄輪次
+    var allOrdersWithRound = [];
     for (var r = 0; r < values.length; r++) {
       var row = values[r];
       var id = String(row[0] || "").trim();
@@ -272,18 +277,37 @@ function getGroupOrderDetail_(sheetName) {
         order.iceLevel = String(row[7] || "").trim();
         order.sugarLevel = String(row[8] || "").trim();
       }
-      order.messageToHost =
-        messageIdx >= 0 ? String(row[messageIdx] || "").trim() : "";
-      var roundRaw = row[roundColIdx];
+      var msgVal = (messageIdx >= 0 && messageIdx < row.length) ? row[messageIdx] : "";
+      order.messageToHost = String(msgVal || "").trim();
+
+      // 讀取輪次：欄位不存在或非正整數時視為 0（無輪次資料）
+      var roundRaw = (roundColIdx < row.length) ? row[roundColIdx] : 0;
       var roundNum = Number(roundRaw);
-      // 若無輪次欄位（舊訂單），直接歸入當前輪次
       var orderRound = (!isNaN(roundNum) && isFinite(roundNum) && roundNum >= 1)
         ? Math.floor(roundNum)
-        : currentRound;
-      if (orderRound === currentRound) {
-        currentOrders.push(order);
-      } else if (orderRound === currentRound - 1) {
-        previousOrders.push(order);
+        : 0;
+
+      allOrdersWithRound.push({ order: order, round: orderRound });
+    }
+
+    // 只有當工作表實際有輪次 ≥ 2 的訂單時，才進行輪次篩選
+    // 否則（舊工作表或第一輪），全部視為當前輪次
+    var hasReorderData = false;
+    for (var i = 0; i < allOrdersWithRound.length; i++) {
+      if (allOrdersWithRound[i].round >= 2) { hasReorderData = true; break; }
+    }
+
+    for (var i = 0; i < allOrdersWithRound.length; i++) {
+      var item = allOrdersWithRound[i];
+      if (!hasReorderData) {
+        currentOrders.push(item.order);
+      } else {
+        var effectiveRound = item.round > 0 ? item.round : currentRound;
+        if (effectiveRound === currentRound) {
+          currentOrders.push(item.order);
+        } else if (effectiveRound === currentRound - 1) {
+          previousOrders.push(item.order);
+        }
       }
     }
   }
