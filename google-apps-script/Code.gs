@@ -114,6 +114,8 @@ function nowString_() {
 }
 
 function getSheetRound_(sheet) {
+  var label = String(sheet.getRange("A8").getValue() || "").trim();
+  if (label !== "目前輪次") return 1; // 舊工作表沒有此標籤，一律視為第 1 輪
   var v = sheet.getRange("B8").getValue();
   var n = Number(v);
   return (!isNaN(n) && isFinite(n) && n >= 1) ? Math.floor(n) : 1;
@@ -273,9 +275,11 @@ function getGroupOrderDetail_(sheetName) {
       order.messageToHost =
         messageIdx >= 0 ? String(row[messageIdx] || "").trim() : "";
       var roundRaw = row[roundColIdx];
-      var orderRound = (!isNaN(Number(roundRaw)) && isFinite(Number(roundRaw)) && Number(roundRaw) >= 1)
-        ? Math.floor(Number(roundRaw))
-        : 1;
+      var roundNum = Number(roundRaw);
+      // 若無輪次欄位（舊訂單），直接歸入當前輪次
+      var orderRound = (!isNaN(roundNum) && isFinite(roundNum) && roundNum >= 1)
+        ? Math.floor(roundNum)
+        : currentRound;
       if (orderRound === currentRound) {
         currentOrders.push(order);
       } else if (orderRound === currentRound - 1) {
